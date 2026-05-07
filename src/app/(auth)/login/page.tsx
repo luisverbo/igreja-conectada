@@ -22,7 +22,7 @@ export default function LoginPage() {
     setError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError('Email ou senha inválidos. Tente novamente.')
@@ -30,8 +30,14 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
-    router.refresh()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single()
+
+    const dest = profile?.role === 'counselor' ? '/conselheiros' : '/dashboard'
+    window.location.href = dest
   }
 
   return (
