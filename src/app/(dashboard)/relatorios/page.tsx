@@ -3,8 +3,9 @@ import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { BarChart3, TrendingUp, Users, Heart, BookOpen, Home, Star, AlertCircle } from 'lucide-react'
-import { DISCIPLESHIP_STATUS_LABELS, type DiscipleshipMemberStatus } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
+import { ChartsSection } from '@/components/relatorios/charts-section'
+import { MapSection } from '@/components/relatorios/map-section'
 
 export default async function RelatoriosPage() {
   const supabase = await createClient()
@@ -21,17 +22,30 @@ export default async function RelatoriosPage() {
     { data: appeals },
     { data: discipleships },
     { data: discipleshipMembers },
-    { data: classes },
     { data: enrollments },
     { data: observations },
   ] = await Promise.all([
-    supabase.from('people').select('status, accepted_jesus_at, created_at, can_serve').eq('church_id', cid),
-    supabase.from('appeals').select('culto_date, total_decisions').eq('church_id', cid).order('culto_date', { ascending: false }).limit(12),
-    supabase.from('discipleships').select('id, name, status').eq('church_id', cid),
-    supabase.from('discipleship_members').select('discipleship_id, status, person_id').eq('status', 'em_acompanhamento'),
-    supabase.from('new_members_classes').select('status, total_lessons').eq('church_id', cid),
+    supabase
+      .from('people')
+      .select('status, gender, birth_date, origin, neighborhood, latitude, longitude, accepted_jesus_at, created_at, can_serve, full_name, id')
+      .eq('church_id', cid),
+    supabase
+      .from('appeals')
+      .select('culto_date, total_decisions')
+      .eq('church_id', cid)
+      .order('culto_date', { ascending: false })
+      .limit(12),
+    supabase
+      .from('discipleships')
+      .select('id, name, status, day_of_week, latitude, longitude, leader_id')
+      .eq('church_id', cid),
+    supabase
+      .from('discipleship_members')
+      .select('discipleship_id, status, person_id')
+      .eq('status', 'em_acompanhamento'),
     supabase.from('new_members_enrollments').select('completed, class_id'),
-    supabase.from('discipleship_observations')
+    supabase
+      .from('discipleship_observations')
       .select('observation_type, needs_care, observation_date, people(full_name), profiles(full_name)')
       .eq('needs_care', true)
       .order('created_at', { ascending: false })
@@ -85,6 +99,38 @@ export default async function RelatoriosPage() {
 
   const months = Object.keys(decisionsByMonth).sort().slice(-6)
 
+  // Prepare map data
+  const peopleMarkers = (people || [])
+    .filter(p => p.latitude != null && p.longitude != null)
+    .map(p => ({
+      id: p.id,
+      full_name: p.full_name,
+      status: p.status,
+      neighborhood: p.neighborhood ?? null,
+      latitude: p.latitude as number,
+      longitude: p.longitude as number,
+    }))
+
+  const discipleshipMarkers = (discipleships || [])
+    .filter(d => d.latitude != null && d.longitude != null)
+    .map(d => ({
+      id: d.id,
+      name: d.name,
+      leader_name: null as string | null,
+      day_of_week: d.day_of_week ?? null,
+      latitude: d.latitude as number,
+      longitude: d.longitude as number,
+    }))
+
+  // Prepare chart data (subset of fields)
+  const chartPeople = (people || []).map(p => ({
+    status: p.status,
+    gender: p.gender ?? null,
+    birth_date: p.birth_date ?? null,
+    origin: p.origin ?? null,
+    neighborhood: p.neighborhood ?? null,
+  }))
+
   return (
     <div>
       <Header title="Relatórios" description="Análise da jornada espiritual e crescimento" userName={profile.full_name} userRole={profile.role} />
@@ -96,7 +142,7 @@ export default async function RelatoriosPage() {
             { label: 'Total de Pessoas', value: totalPeople, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Taxa de Conclusão NM', value: `${completionRate}%`, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Precisam de Cuidado', value: careNeeded, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Taxa de Servido', value: `${servingRate}%`, icon: Star, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Taxa de Servindo', value: `${servingRate}%`, icon: Star, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           ].map(s => {
             const Icon = s.icon
             return (
@@ -113,13 +159,16 @@ export default async function RelatoriosPage() {
           })}
         </div>
 
+        {/* Charts Section */}
+        <ChartsSection people={chartPeople} />
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Journey funnel */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-violet-600" />
-                Distribuição por Status Espiritual
+                Funil de Jornada Espiritual
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -181,6 +230,9 @@ export default async function RelatoriosPage() {
           </Card>
         </div>
 
+        {/* Map Section */}
+        <MapSection people={peopleMarkers} discipleships={discipleshipMarkers} />
+
         {/* Care alerts */}
         <Card>
           <CardHeader>
@@ -221,7 +273,7 @@ export default async function RelatoriosPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Home className="h-4 w-4 text-violet-600" />
-              Relatório de Acompanhamento por Discipulado
+              Discipulados Ativos
             </CardTitle>
           </CardHeader>
           <CardContent>
