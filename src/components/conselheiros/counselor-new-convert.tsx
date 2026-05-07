@@ -35,6 +35,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
     city: '',
     state: '',
     origin: '' as 'aceitou_jesus_aqui' | 'veio_de_outra_igreja' | '',
+    gender: '' as 'M' | 'F' | 'outro' | '',
   })
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
 
@@ -102,6 +103,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
         city: form.city.trim() || null,
         state: form.state.trim() || null,
         origin: form.origin || null,
+        gender: form.gender || null,
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
         accepted_jesus_at: new Date().toISOString().split('T')[0],
@@ -124,7 +126,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
     ])
 
     setSuccess(form.full_name.trim())
-    setForm({ full_name: '', phone: '', birth_date: '', cep: '', address: '', neighborhood: '', city: '', state: '', origin: '' })
+    setForm({ full_name: '', phone: '', birth_date: '', cep: '', address: '', neighborhood: '', city: '', state: '', origin: '', gender: '' })
     setCoords(null)
     setLoading(false)
     router.refresh()
@@ -278,6 +280,29 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
               maxLength={2}
               className={inputClass}
             />
+          </div>
+        </div>
+
+        {/* Gender */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-slate-700">
+            Sexo <span className="text-violet-600">*</span>
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            {[{ v: 'M', label: '♂ Masculino' }, { v: 'F', label: '♀ Feminino' }, { v: 'outro', label: '— Outro' }].map(opt => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => set('gender', opt.v)}
+                className={`h-14 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.98] ${
+                  form.gender === opt.v
+                    ? 'border-violet-600 bg-violet-50 text-violet-700'
+                    : 'border-slate-200 bg-white text-slate-600'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 
