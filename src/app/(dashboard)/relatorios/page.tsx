@@ -37,7 +37,7 @@ export default async function RelatoriosPage() {
       .limit(12),
     supabase
       .from('discipleships')
-      .select('id, name, status, day_of_week, latitude, longitude, leader_id')
+      .select('id, name, status, day_of_week, latitude, longitude, leader:profiles!discipleships_leader_id_fkey(full_name)')
       .eq('church_id', cid),
     supabase
       .from('discipleship_members')
@@ -161,7 +161,7 @@ export default async function RelatoriosPage() {
     .map(d => ({
       id: d.id,
       name: d.name,
-      leader_name: null as string | null,
+      leader_name: (d.leader as any)?.full_name ?? null,
       day_of_week: d.day_of_week ?? null,
       latitude: d.latitude as number,
       longitude: d.longitude as number,
