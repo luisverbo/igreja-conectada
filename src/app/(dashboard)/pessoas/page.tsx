@@ -7,7 +7,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { UserPlus, Phone, Search } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatPhone } from '@/lib/utils'
-import { PERSON_STATUS_LABELS, type PersonStatus } from '@/lib/types'
+import { PERSON_STATUS_LABELS, type PersonStatus, type UserRole } from '@/lib/types'
+
+const roleLabels: Record<string, string> = {
+  super_admin: 'Super Admin',
+  pastor: 'Pastor',
+  coordinator: 'Coordenador',
+  counselor: 'Conselheiro',
+  new_members_teacher: 'Prof. Novos Membros',
+  discipleship_supervisor: 'Sup. Discipulado',
+  discipleship_leader: 'Líder Discipulado',
+  viewer: 'Visualizador',
+}
 
 const statusVariant: Record<PersonStatus, 'default' | 'secondary' | 'success' | 'warning' | 'info' | 'outline'> = {
   novo: 'secondary',
@@ -30,7 +41,7 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
 
   let query = supabase
     .from('people')
-    .select('*, counselor:profiles!people_created_by_fkey(full_name)')
+    .select('*, counselor:profiles!people_created_by_fkey(full_name, role)')
     .eq('church_id', profile.church_id)
     .order('full_name')
 
@@ -129,7 +140,12 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
                         {formatDate(person.accepted_jesus_at)}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
-                        {(person as any).counselor?.full_name ?? <span className="text-slate-400">—</span>}
+                        {(person as any).counselor ? (
+                          <div>
+                            <p className="font-medium text-slate-900">{(person as any).counselor.full_name}</p>
+                            <p className="text-xs text-slate-400">{roleLabels[(person as any).counselor.role] ?? (person as any).counselor.role}</p>
+                          </div>
+                        ) : <span className="text-slate-400">—</span>}
                       </TableCell>
                       <TableCell>
                         {person.can_serve ? (
