@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Map } from 'lucide-react'
 
-// ssr: false MUST be inside a Client Component per Next.js 16 docs
 const MapView = dynamic(
   () => import('./map-view').then(mod => mod.MapView),
   {
@@ -35,12 +34,21 @@ interface DiscipleshipMarker {
   longitude: number
 }
 
+interface NeighborhoodGroup {
+  neighborhood: string
+  city: string
+  count: number
+  lat: number
+  lng: number
+}
+
 interface Props {
   people: PersonMarker[]
   discipleships: DiscipleshipMarker[]
+  neighborhoodGroups: NeighborhoodGroup[]
 }
 
-export function MapSection({ people, discipleships }: Props) {
+export function MapSection({ people, discipleships, neighborhoodGroups }: Props) {
   return (
     <Card>
       <CardHeader>
@@ -50,7 +58,7 @@ export function MapSection({ people, discipleships }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <MapView people={people} discipleships={discipleships} />
+        <MapView people={people} discipleships={discipleships} neighborhoodGroups={neighborhoodGroups} />
       </CardContent>
     </Card>
   )

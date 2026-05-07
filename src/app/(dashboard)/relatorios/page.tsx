@@ -27,7 +27,7 @@ export default async function RelatoriosPage() {
   ] = await Promise.all([
     supabase
       .from('people')
-      .select('status, gender, birth_date, origin, neighborhood, latitude, longitude, accepted_jesus_at, created_at, can_serve, full_name, id')
+      .select('status, gender, birth_date, origin, neighborhood, city, latitude, longitude, accepted_jesus_at, created_at, can_serve, full_name, id')
       .eq('church_id', cid),
     supabase
       .from('appeals')
@@ -99,7 +99,52 @@ export default async function RelatoriosPage() {
 
   const months = Object.keys(decisionsByMonth).sort().slice(-6)
 
-  // Prepare map data
+  // Geocode neighborhoods that don't have coordinates yet
+  async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=br`,
+        { headers: { 'User-Agent': 'IgrejaConectada/1.0' }, next: { revalidate: 86400 } }
+      )
+      const data = await res.json()
+      if (Array.isArray(data) && data.length > 0) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+      }
+    } catch { /* ignore */ }
+    return null
+  }
+
+  // Group members by neighborhood+city
+  const neighborhoodMap: Record<string, { neighborhood: string; city: string; count: number; lat?: number; lng?: number }> = {}
+  for (const p of people || []) {
+    if (!p.neighborhood && !p.city) continue
+    const key = `${p.neighborhood ?? ''}|${p.city ?? ''}`
+    if (!neighborhoodMap[key]) {
+      neighborhoodMap[key] = { neighborhood: p.neighborhood ?? '', city: p.city ?? '', count: 0 }
+    }
+    neighborhoodMap[key].count++
+    // Use existing coords if available
+    if (p.latitude && p.longitude && !neighborhoodMap[key].lat) {
+      neighborhoodMap[key].lat = p.latitude
+      neighborhoodMap[key].lng = p.longitude
+    }
+  }
+
+  // Geocode neighborhoods without coordinates (up to 8 at a time)
+  const toGeocode = Object.values(neighborhoodMap).filter(n => !n.lat).slice(0, 8)
+  await Promise.all(
+    toGeocode.map(async (n) => {
+      const query = [n.neighborhood, n.city, 'Brasil'].filter(Boolean).join(', ')
+      const coords = await geocode(query)
+      if (coords) { n.lat = coords.lat; n.lng = coords.lng }
+    })
+  )
+
+  const neighborhoodGroups = Object.values(neighborhoodMap)
+    .filter(n => n.lat && n.lng)
+    .map(n => ({ neighborhood: n.neighborhood, city: n.city, count: n.count, lat: n.lat as number, lng: n.lng as number }))
+
+  // Individual markers (exact GPS from CEP)
   const peopleMarkers = (people || [])
     .filter(p => p.latitude != null && p.longitude != null)
     .map(p => ({
@@ -231,7 +276,7 @@ export default async function RelatoriosPage() {
         </div>
 
         {/* Map Section */}
-        <MapSection people={peopleMarkers} discipleships={discipleshipMarkers} />
+        <MapSection people={peopleMarkers} discipleships={discipleshipMarkers} neighborhoodGroups={neighborhoodGroups} />
 
         {/* Care alerts */}
         <Card>
