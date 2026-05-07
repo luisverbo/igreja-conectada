@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Settings, Users, Church } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { CreateUserDialog } from '@/components/configuracoes/create-user-dialog'
 
 const roleLabels: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -89,10 +90,13 @@ export default async function ConfiguracoesPage() {
         {canManageUsers && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-violet-600" />
-                Usuários do Sistema
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-violet-600" />
+                  Usuários do Sistema
+                </CardTitle>
+                <CreateUserDialog />
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
