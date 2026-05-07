@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select } from '@/components/ui/select'
 
 const roles = [
   { value: 'pastor', label: 'Pastor' },
@@ -86,15 +86,15 @@ export function CreateUserDialog() {
 
             <div className="space-y-2">
               <Label>Função</Label>
-              <Select value={form.role} onValueChange={v => set('role', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a função" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map(r => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
+              <Select
+                value={form.role}
+                onChange={e => set('role', e.target.value)}
+                placeholder="Selecione a função"
+                required
+              >
+                {roles.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
               </Select>
             </div>
 
