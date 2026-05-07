@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -12,6 +12,31 @@ function fixLeafletIcon() {
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  })
+}
+
+function getBubbleColor(count: number): string {
+  if (count >= 10) return '#7f1d1d'  // vermelho escuro
+  if (count >= 6)  return '#dc2626'  // vermelho
+  if (count >= 4)  return '#ea580c'  // laranja
+  if (count >= 2)  return '#7c3aed'  // violeta
+  return '#a78bfa'                    // violeta claro
+}
+
+function makeBubbleIcon(count: number, radius: number) {
+  const color = getBubbleColor(count)
+  const size = radius * 2
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};opacity:0.85;border:2px solid white;
+      display:flex;align-items:center;justify-content:center;
+      color:white;font-weight:700;font-size:${count > 9 ? 11 : 13}px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    ">${count}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [radius, radius],
   })
 }
 
@@ -81,22 +106,17 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
           />
 
           {activeTab === 'membros' && neighborhoodGroups.map((n, i) => {
-            const radius = 12 + Math.round((n.count / maxCount) * 28)
+            const radius = 16 + Math.round((n.count / maxCount) * 24)
             return (
-              <CircleMarker
-                key={i}
-                center={[n.lat, n.lng]}
-                radius={radius}
-                pathOptions={{ color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.55, weight: 2 }}
-              >
+              <Marker key={i} position={[n.lat, n.lng]} icon={makeBubbleIcon(n.count, radius)}>
                 <Popup>
                   <div className="text-sm space-y-0.5">
-                    <p className="font-bold text-violet-700">{n.neighborhood || n.city}</p>
+                    <p className="font-bold" style={{ color: getBubbleColor(n.count) }}>{n.neighborhood || n.city}</p>
                     {n.neighborhood && n.city && <p className="text-slate-500">{n.city}</p>}
                     <p className="text-slate-800 font-semibold">{n.count} {n.count === 1 ? 'membro' : 'membros'}</p>
                   </div>
                 </Popup>
-              </CircleMarker>
+              </Marker>
             )
           })}
 
@@ -125,6 +145,49 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
           ))}
         </MapContainer>
       </div>
+
+      {/* Legenda de cores */}
+      {activeTab === 'membros' && hasNeighborhoods && (
+        <div className="flex items-center gap-4 flex-wrap text-xs text-slate-500">
+          <span className="font-medium text-slate-600">Legenda:</span>
+          {[
+            { label: '1 pessoa', color: '#a78bfa' },
+            { label: '2–3', color: '#7c3aed' },
+            { label: '4–5', color: '#ea580c' },
+            { label: '6–9', color: '#dc2626' },
+            { label: '10+', color: '#7f1d1d' },
+          ].map(l => (
+            <span key={l.label} className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-full" style={{ background: l.color }} />
+              {l.label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Ranking de bairros */}
+      {activeTab === 'membros' && hasNeighborhoods && (
+        <div className="mt-2">
+          <p className="text-xs font-semibold text-slate-600 mb-2">Ranking de Bairros</p>
+          <div className="space-y-1.5">
+            {[...neighborhoodGroups].sort((a, b) => b.count - a.count).map((n, i) => {
+              const pct = Math.round((n.count / neighborhoodGroups.reduce((s, x) => s + x.count, 0)) * 100)
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 w-4 text-right">{i + 1}.</span>
+                  <span className="text-xs text-slate-700 w-32 truncate">{n.neighborhood || n.city}</span>
+                  <div className="flex-1 h-4 rounded bg-slate-100 overflow-hidden">
+                    <div className="h-4 rounded flex items-center pl-1.5 transition-all" style={{ width: `${Math.max(pct, 8)}%`, background: getBubbleColor(n.count) }}>
+                      <span className="text-white text-xs font-bold">{n.count}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-400">{pct}%</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {activeTab === 'membros' && !hasNeighborhoods && (
         <p className="text-center text-xs text-slate-400">Cadastre convertidos com bairro/cidade para ver no mapa.</p>
