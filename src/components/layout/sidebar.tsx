@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Heart, BookOpen,
-  Home, BarChart3, Settings, ChevronRight, Church, LogOut,
+  Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -74,7 +74,16 @@ export function Sidebar({ role }: SidebarProps) {
         })}
       </nav>
 
-      <div className="px-3 py-4 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
+      <div className="px-3 py-4 border-t space-y-1" style={{ borderColor: 'var(--sidebar-border)' }}>
+        {role === 'super_admin' && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-amber-300 hover:bg-white/10 hover:text-amber-200 transition-colors"
+          >
+            <Building2 className="h-4 w-4 text-amber-400" />
+            <span>Painel Admin</span>
+          </Link>
+        )}
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-violet-200 hover:bg-white/10 hover:text-white transition-colors"
