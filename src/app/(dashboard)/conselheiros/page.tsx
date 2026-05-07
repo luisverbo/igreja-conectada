@@ -19,14 +19,7 @@ export default async function ConselheirosPage() {
   if (!profile?.church_id) return null
 
   if (profile.role === 'counselor') {
-    return (
-      <div>
-        <Header title="Conselheiros" description="Cadastro de novos convertidos" userName={profile.full_name} userRole={profile.role} />
-        <div className="p-6">
-          <CounselorNewConvert churchId={profile.church_id} userId={user.id} userName={profile.full_name} />
-        </div>
-      </div>
-    )
+    return <CounselorNewConvert churchId={profile.church_id} userId={user.id} userName={profile.full_name} />
   }
 
   const { data: appeals } = await supabase

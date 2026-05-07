@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
+import { MobileShell } from '@/components/layout/mobile-shell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -11,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, church_id')
+    .select('role, church_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -23,6 +24,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (!pathname.startsWith('/conselheiros')) {
       redirect('/conselheiros')
     }
+
+    const { data: church } = await supabase
+      .from('churches')
+      .select('name')
+      .eq('id', profile!.church_id)
+      .single()
+
+    return (
+      <MobileShell
+        userName={profile?.full_name ?? 'Conselheiro'}
+        churchName={church?.name ?? 'Igreja'}
+      >
+        {children}
+      </MobileShell>
+    )
   }
 
   return (

@@ -2,12 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { UserPlus, CheckCircle } from 'lucide-react'
+import { Heart, CheckCircle, UserPlus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface Props {
   churchId: string
@@ -20,12 +16,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({
-    full_name: '',
-    phone: '',
-    birth_date: '',
-    address: '',
-  })
+  const [form, setForm] = useState({ full_name: '', phone: '', birth_date: '', address: '' })
 
   function set(k: string, v: string) { setForm(p => ({ ...p, [k]: v })) }
 
@@ -71,79 +62,106 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-violet-600" />
-            Cadastrar Novo Convertido
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {success && (
-            <div className="mb-4 flex items-center gap-3 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3">
-              <CheckCircle className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-emerald-800">{success} cadastrado(a) com sucesso!</p>
-                <p className="text-xs text-emerald-600 mt-0.5">Pode cadastrar o próximo convertido.</p>
-              </div>
-            </div>
+    <div className="px-4 py-5 space-y-5">
+      {/* Título */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600">
+          <Heart className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h1 className="text-lg font-bold text-slate-900">Novo Convertido</h1>
+          <p className="text-sm text-slate-500">Preencha os dados abaixo</p>
+        </div>
+      </div>
+
+      {/* Feedback de sucesso */}
+      {success && (
+        <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
+          <CheckCircle className="h-6 w-6 text-emerald-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-emerald-800">{success} cadastrado(a)!</p>
+            <p className="text-sm text-emerald-600 mt-0.5">Pode cadastrar o próximo.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Formulário */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-700">
+            Nome Completo <span className="text-violet-600">*</span>
+          </label>
+          <input
+            type="text"
+            value={form.full_name}
+            onChange={e => set('full_name', e.target.value)}
+            placeholder="Nome do convertido"
+            required
+            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-700">
+            Telefone / WhatsApp <span className="text-violet-600">*</span>
+          </label>
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={e => set('phone', e.target.value)}
+            placeholder="(11) 99999-9999"
+            required
+            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-700">
+            Data de Nascimento <span className="text-violet-600">*</span>
+          </label>
+          <input
+            type="date"
+            value={form.birth_date}
+            onChange={e => set('birth_date', e.target.value)}
+            required
+            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-700">
+            Endereço <span className="text-slate-400 font-normal text-xs">(opcional)</span>
+          </label>
+          <input
+            type="text"
+            value={form.address}
+            onChange={e => set('address', e.target.value)}
+            placeholder="Rua, número, bairro..."
+            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+        </div>
+
+        {error && (
+          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full h-14 rounded-xl bg-violet-600 text-white text-base font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+        >
+          {loading ? (
+            <span className="opacity-70">Cadastrando...</span>
+          ) : (
+            <>
+              <UserPlus className="h-5 w-5" />
+              Cadastrar Convertido
+            </>
           )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Nome Completo *</Label>
-              <Input
-                id="full_name"
-                value={form.full_name}
-                onChange={e => set('full_name', e.target.value)}
-                placeholder="Nome do convertido"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone / WhatsApp *</Label>
-              <Input
-                id="phone"
-                value={form.phone}
-                onChange={e => set('phone', e.target.value)}
-                placeholder="(11) 99999-9999"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="birth_date">Data de Nascimento *</Label>
-              <Input
-                id="birth_date"
-                type="date"
-                value={form.birth_date}
-                onChange={e => set('birth_date', e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Endereço <span className="text-slate-400 font-normal">(opcional)</span></Label>
-              <Input
-                id="address"
-                value={form.address}
-                onChange={e => set('address', e.target.value)}
-                placeholder="Rua, número, bairro..."
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Cadastrando...' : 'Cadastrar Convertido'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        </button>
+      </form>
     </div>
   )
 }
