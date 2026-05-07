@@ -30,7 +30,7 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
 
   let query = supabase
     .from('people')
-    .select('*')
+    .select('*, counselor:profiles!people_created_by_fkey(full_name)')
     .eq('church_id', profile.church_id)
     .order('full_name')
 
@@ -90,6 +90,7 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
                   <TableHead>Telefone</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Aceite Jesus</TableHead>
+                  <TableHead>Cadastrado por</TableHead>
                   <TableHead>Pode Servir</TableHead>
                   <TableHead />
                 </TableRow>
@@ -127,6 +128,9 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
                       <TableCell className="text-sm text-slate-600">
                         {formatDate(person.accepted_jesus_at)}
                       </TableCell>
+                      <TableCell className="text-sm text-slate-600">
+                        {(person as any).counselor?.full_name ?? <span className="text-slate-400">—</span>}
+                      </TableCell>
                       <TableCell>
                         {person.can_serve ? (
                           <Badge variant="success">Sim</Badge>
@@ -143,7 +147,7 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-12 text-slate-400">
                       <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p>Nenhuma pessoa encontrada</p>
                     </TableCell>

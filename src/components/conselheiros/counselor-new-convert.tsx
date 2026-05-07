@@ -48,6 +48,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
         accepted_jesus_at: new Date().toISOString().split('T')[0],
         status: 'novo',
         can_serve: false,
+        created_by: userId,
       })
       .select()
       .single()
