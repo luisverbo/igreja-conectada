@@ -288,8 +288,8 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
           <label className="block text-sm font-semibold text-slate-700">
             Sexo <span className="text-violet-600">*</span>
           </label>
-          <div className="grid grid-cols-3 gap-3">
-            {[{ v: 'M', label: '♂ Masculino' }, { v: 'F', label: '♀ Feminino' }, { v: 'outro', label: '— Outro' }].map(opt => (
+          <div className="grid grid-cols-2 gap-3">
+            {[{ v: 'M', label: '♂ Masculino' }, { v: 'F', label: '♀ Feminino' }].map(opt => (
               <button
                 key={opt.v}
                 type="button"
