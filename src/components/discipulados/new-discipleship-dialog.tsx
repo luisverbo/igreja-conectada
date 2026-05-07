@@ -38,6 +38,26 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
     setLoading(true)
     const supabase = createClient()
 
+    let latitude: number | null = null
+    let longitude: number | null = null
+
+    if (form.address && form.city) {
+      try {
+        const query = encodeURIComponent(`${form.address}, ${form.neighborhood || ''} ${form.city} Brasil`)
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
+          { headers: { 'User-Agent': 'IgrejaConectada/1.0' } }
+        )
+        const geoData = await res.json()
+        if (Array.isArray(geoData) && geoData.length > 0) {
+          latitude = parseFloat(geoData[0].lat)
+          longitude = parseFloat(geoData[0].lon)
+        }
+      } catch {
+        // silently ignore geocoding errors
+      }
+    }
+
     await supabase.from('discipleships').insert({
       church_id: churchId,
       name: form.name,
@@ -51,6 +71,8 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
       notes: form.notes || null,
       status: 'ativo',
       created_by: userId,
+      latitude,
+      longitude,
     })
 
     setLoading(false)

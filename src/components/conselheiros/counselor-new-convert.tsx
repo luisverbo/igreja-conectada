@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Heart, CheckCircle, UserPlus } from 'lucide-react'
+import { Heart, CheckCircle, UserPlus, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -11,14 +11,76 @@ interface Props {
   userName: string
 }
 
+interface CepData {
+  logradouro: string
+  bairro: string
+  localidade: string
+  uf: string
+  erro?: boolean
+}
+
 export function CounselorNewConvert({ churchId, userId, userName }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [cepLoading, setCepLoading] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({ full_name: '', phone: '', birth_date: '', address: '' })
+  const [form, setForm] = useState({
+    full_name: '',
+    phone: '',
+    birth_date: '',
+    cep: '',
+    address: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    origin: '' as 'aceitou_jesus_aqui' | 'veio_de_outra_igreja' | '',
+  })
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   function set(k: string, v: string) { setForm(p => ({ ...p, [k]: v })) }
+
+  async function handleCepChange(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 8)
+    set('cep', digits)
+
+    if (digits.length === 8) {
+      setCepLoading(true)
+      setCoords(null)
+      try {
+        const [viaCepRes, nominatimRes] = await Promise.allSettled([
+          fetch(`https://viacep.com.br/ws/${digits}/json/`),
+          fetch(`https://nominatim.openstreetmap.org/search?q=${digits}+Brasil&format=json&limit=1`, {
+            headers: { 'User-Agent': 'IgrejaConectada/1.0' },
+          }),
+        ])
+
+        if (viaCepRes.status === 'fulfilled') {
+          const data: CepData = await viaCepRes.value.json()
+          if (!data.erro) {
+            setForm(p => ({
+              ...p,
+              address: data.logradouro || p.address,
+              neighborhood: data.bairro || p.neighborhood,
+              city: data.localidade || p.city,
+              state: data.uf || p.state,
+            }))
+          }
+        }
+
+        if (nominatimRes.status === 'fulfilled') {
+          const geoData = await nominatimRes.value.json()
+          if (Array.isArray(geoData) && geoData.length > 0) {
+            setCoords({ lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) })
+          }
+        }
+      } catch {
+        // silently ignore geocoding errors
+      } finally {
+        setCepLoading(false)
+      }
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,6 +98,12 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
         phone: form.phone.trim() || null,
         birth_date: form.birth_date || null,
         address: form.address.trim() || null,
+        neighborhood: form.neighborhood.trim() || null,
+        city: form.city.trim() || null,
+        state: form.state.trim() || null,
+        origin: form.origin || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
         accepted_jesus_at: new Date().toISOString().split('T')[0],
         status: 'novo',
         can_serve: false,
@@ -56,10 +124,13 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
     ])
 
     setSuccess(form.full_name.trim())
-    setForm({ full_name: '', phone: '', birth_date: '', address: '' })
+    setForm({ full_name: '', phone: '', birth_date: '', cep: '', address: '', neighborhood: '', city: '', state: '', origin: '' })
+    setCoords(null)
     setLoading(false)
     router.refresh()
   }
+
+  const inputClass = "w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
 
   return (
     <div className="px-4 py-5 space-y-5">
@@ -97,7 +168,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
             onChange={e => set('full_name', e.target.value)}
             placeholder="Nome do convertido"
             required
-            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className={inputClass}
           />
         </div>
 
@@ -111,7 +182,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
             onChange={e => set('phone', e.target.value)}
             placeholder="(11) 99999-9999"
             required
-            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className={inputClass}
           />
         </div>
 
@@ -124,20 +195,130 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
             value={form.birth_date}
             onChange={e => set('birth_date', e.target.value)}
             required
-            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className={inputClass}
           />
         </div>
 
         <div className="space-y-1.5">
           <label className="block text-sm font-semibold text-slate-700">
-            Endereço <span className="text-slate-400 font-normal text-xs">(opcional)</span>
+            CEP <span className="text-violet-600">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.cep}
+              onChange={e => handleCepChange(e.target.value)}
+              placeholder="00000-000"
+              required
+              maxLength={8}
+              className={`${inputClass} pr-12`}
+            />
+            {cepLoading && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
+              </div>
+            )}
+          </div>
+          {coords && (
+            <p className="text-xs text-emerald-600 flex items-center gap-1">
+              <span>✓</span> Localização obtida com sucesso
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-700">
+            Endereço <span className="text-slate-400 font-normal text-xs">(preenchido pelo CEP)</span>
           </label>
           <input
             type="text"
             value={form.address}
             onChange={e => set('address', e.target.value)}
-            placeholder="Rua, número, bairro..."
-            className="w-full h-14 rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            placeholder="Rua, número..."
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-700">
+            Bairro <span className="text-slate-400 font-normal text-xs">(preenchido pelo CEP)</span>
+          </label>
+          <input
+            type="text"
+            value={form.neighborhood}
+            onChange={e => set('neighborhood', e.target.value)}
+            placeholder="Bairro"
+            className={inputClass}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-slate-700">
+              Cidade <span className="text-slate-400 font-normal text-xs">(CEP)</span>
+            </label>
+            <input
+              type="text"
+              value={form.city}
+              onChange={e => set('city', e.target.value)}
+              placeholder="Cidade"
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-slate-700">
+              Estado <span className="text-slate-400 font-normal text-xs">(CEP)</span>
+            </label>
+            <input
+              type="text"
+              value={form.state}
+              onChange={e => set('state', e.target.value)}
+              placeholder="UF"
+              maxLength={2}
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        {/* Origin */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-slate-700">
+            Como chegou? <span className="text-violet-600">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => set('origin', 'aceitou_jesus_aqui')}
+              className={`h-14 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.98] ${
+                form.origin === 'aceitou_jesus_aqui'
+                  ? 'border-violet-600 bg-violet-50 text-violet-700'
+                  : 'border-slate-200 bg-white text-slate-600'
+              }`}
+            >
+              ✝️ Aceitou Jesus aqui
+            </button>
+            <button
+              type="button"
+              onClick={() => set('origin', 'veio_de_outra_igreja')}
+              className={`h-14 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.98] ${
+                form.origin === 'veio_de_outra_igreja'
+                  ? 'border-violet-600 bg-violet-50 text-violet-700'
+                  : 'border-slate-200 bg-white text-slate-600'
+              }`}
+            >
+              🏛️ Outra igreja
+            </button>
+          </div>
+          {/* Hidden required input for form validation */}
+          <input
+            type="text"
+            required
+            value={form.origin}
+            onChange={() => {}}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
           />
         </div>
 
@@ -149,7 +330,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !form.origin}
           className="w-full h-14 rounded-xl bg-violet-600 text-white text-base font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-2"
         >
           {loading ? (
