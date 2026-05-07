@@ -116,57 +116,49 @@ export function MapView({ people, discipleships }: Props) {
         </button>
       </div>
 
-      {activeMarkers.length === 0 ? (
-        <div className="h-64 rounded-xl bg-slate-100 flex items-center justify-center">
-          <p className="text-slate-400 text-sm">
-            {activeTab === 'membros'
-              ? 'Nenhum membro com localização cadastrada ainda'
-              : 'Nenhuma célula com localização cadastrada ainda'}
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: '420px' }}>
-          <MapContainer
-            center={mapCenter}
-            zoom={12}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+      <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: '420px' }}>
+        <MapContainer
+          center={mapCenter}
+          zoom={activeMarkers.length > 0 ? 12 : 5}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-            {activeTab === 'membros' && membrosWithCoords.map(person => (
-              <Marker key={person.id} position={[person.latitude, person.longitude]}>
-                <Popup>
-                  <div className="text-sm">
-                    <p className="font-semibold">{person.full_name}</p>
-                    <p className="text-slate-600">{STATUS_LABELS[person.status] || person.status}</p>
-                    {person.neighborhood && (
-                      <p className="text-slate-500">{person.neighborhood}</p>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+          {activeTab === 'membros' && membrosWithCoords.map(person => (
+            <Marker key={person.id} position={[person.latitude, person.longitude]}>
+              <Popup>
+                <div className="text-sm">
+                  <p className="font-semibold">{person.full_name}</p>
+                  <p className="text-slate-600">{STATUS_LABELS[person.status] || person.status}</p>
+                  {person.neighborhood && <p className="text-slate-500">{person.neighborhood}</p>}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
 
-            {activeTab === 'celulas' && celulasWithCoords.map(disc => (
-              <Marker key={disc.id} position={[disc.latitude, disc.longitude]}>
-                <Popup>
-                  <div className="text-sm">
-                    <p className="font-semibold">{disc.name}</p>
-                    {disc.leader_name && (
-                      <p className="text-slate-600">Líder: {disc.leader_name}</p>
-                    )}
-                    {disc.day_of_week && (
-                      <p className="text-slate-500">{DAY_LABELS[disc.day_of_week] || disc.day_of_week}</p>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        </div>
+          {activeTab === 'celulas' && celulasWithCoords.map(disc => (
+            <Marker key={disc.id} position={[disc.latitude, disc.longitude]}>
+              <Popup>
+                <div className="text-sm">
+                  <p className="font-semibold">{disc.name}</p>
+                  {disc.leader_name && <p className="text-slate-600">Líder: {disc.leader_name}</p>}
+                  {disc.day_of_week && <p className="text-slate-500">{DAY_LABELS[disc.day_of_week] || disc.day_of_week}</p>}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
+
+      {activeMarkers.length === 0 && (
+        <p className="text-center text-xs text-slate-400">
+          {activeTab === 'membros'
+            ? 'Nenhum membro com localização ainda. Cadastre convertidos com CEP para aparecerem aqui.'
+            : 'Nenhuma célula com localização ainda. Adicione endereço aos discipulados.'}
+        </p>
       )}
     </div>
   )
