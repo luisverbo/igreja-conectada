@@ -8,6 +8,7 @@ import { Plus, Heart, Users, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import { NewAppealDialog } from '@/components/conselheiros/new-appeal-dialog'
+import { CounselorNewConvert } from '@/components/conselheiros/counselor-new-convert'
 
 export default async function ConselheirosPage() {
   const supabase = await createClient()
@@ -16,6 +17,17 @@ export default async function ConselheirosPage() {
 
   const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role').eq('id', user.id).single()
   if (!profile?.church_id) return null
+
+  if (profile.role === 'counselor') {
+    return (
+      <div>
+        <Header title="Conselheiros" description="Cadastro de novos convertidos" userName={profile.full_name} userRole={profile.role} />
+        <div className="p-6">
+          <CounselorNewConvert churchId={profile.church_id} userId={user.id} userName={profile.full_name} />
+        </div>
+      </div>
+    )
+  }
 
   const { data: appeals } = await supabase
     .from('appeals')
