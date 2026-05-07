@@ -96,8 +96,8 @@ export function ChartsSection({ people }: Props) {
   // Gender distribution
   const genderMap: Record<string, number> = {}
   people.forEach(p => {
-    const g = p.gender || 'outro'
-    genderMap[g] = (genderMap[g] || 0) + 1
+    if (p.gender !== 'M' && p.gender !== 'F') return
+    genderMap[p.gender] = (genderMap[p.gender] || 0) + 1
   })
   const genderData = Object.entries(genderMap).map(([key, value]) => ({
     name: GENDER_LABELS[key] || key,
