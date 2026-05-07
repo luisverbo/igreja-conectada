@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Phone, Mail, Calendar, MapPin, Edit, BookOpen, Home, Heart } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, Calendar, MapPin, BookOpen, Home, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,8 @@ import {
   PERSON_STATUS_LABELS, JOURNEY_EVENT_LABELS,
   type PersonStatus, type JourneyEventType
 } from '@/lib/types'
+import { EditPersonDialog } from '@/components/pessoas/edit-person-dialog'
+import { DeletePersonButton } from '@/components/pessoas/delete-person-button'
 
 const statusVariant: Record<PersonStatus, 'default' | 'secondary' | 'success' | 'warning' | 'info' | 'outline'> = {
   novo: 'secondary',
@@ -96,7 +98,7 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {person.phone && (
               <a href={whatsappLink(person.phone)} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm">
@@ -105,10 +107,8 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                 </Button>
               </a>
             )}
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
+            <EditPersonDialog person={person} />
+            <DeletePersonButton personId={person.id} personName={person.full_name} />
           </div>
         </div>
       </div>

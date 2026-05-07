@@ -114,16 +114,16 @@ export default async function RelatoriosPage() {
     return null
   }
 
-  // Group members by neighborhood+city
-  const neighborhoodMap: Record<string, { neighborhood: string; city: string; count: number; lat?: number; lng?: number }> = {}
+  // Group members by neighborhood+city, tracking novos vs membros
+  const neighborhoodMap: Record<string, { neighborhood: string; city: string; novos: number; membros: number; lat?: number; lng?: number }> = {}
   for (const p of people || []) {
     if (!p.neighborhood && !p.city) continue
     const key = `${p.neighborhood ?? ''}|${p.city ?? ''}`
     if (!neighborhoodMap[key]) {
-      neighborhoodMap[key] = { neighborhood: p.neighborhood ?? '', city: p.city ?? '', count: 0 }
+      neighborhoodMap[key] = { neighborhood: p.neighborhood ?? '', city: p.city ?? '', novos: 0, membros: 0 }
     }
-    neighborhoodMap[key].count++
-    // Use existing coords if available
+    if (p.status === 'novo') neighborhoodMap[key].novos++
+    else neighborhoodMap[key].membros++
     if (p.latitude && p.longitude && !neighborhoodMap[key].lat) {
       neighborhoodMap[key].lat = p.latitude
       neighborhoodMap[key].lng = p.longitude
@@ -140,9 +140,15 @@ export default async function RelatoriosPage() {
     })
   )
 
-  const neighborhoodGroups = Object.values(neighborhoodMap)
-    .filter(n => n.lat && n.lng)
-    .map(n => ({ neighborhood: n.neighborhood, city: n.city, count: n.count, lat: n.lat as number, lng: n.lng as number }))
+  const geocodedGroups = Object.values(neighborhoodMap).filter(n => n.lat && n.lng)
+
+  const novosGroups = geocodedGroups
+    .filter(n => n.novos > 0)
+    .map(n => ({ neighborhood: n.neighborhood, city: n.city, count: n.novos, lat: n.lat as number, lng: n.lng as number }))
+
+  const membrosGroups = geocodedGroups
+    .filter(n => n.membros > 0)
+    .map(n => ({ neighborhood: n.neighborhood, city: n.city, count: n.membros, lat: n.lat as number, lng: n.lng as number }))
 
   // Individual markers (exact GPS from CEP)
   const peopleMarkers = (people || [])
@@ -276,7 +282,7 @@ export default async function RelatoriosPage() {
         </div>
 
         {/* Map Section */}
-        <MapSection people={peopleMarkers} discipleships={discipleshipMarkers} neighborhoodGroups={neighborhoodGroups} />
+        <MapSection people={peopleMarkers} discipleships={discipleshipMarkers} novosGroups={novosGroups} membrosGroups={membrosGroups} />
 
         {/* Care alerts */}
         <Card>

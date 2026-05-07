@@ -16,11 +16,11 @@ function fixLeafletIcon() {
 }
 
 function getBubbleColor(count: number): string {
-  if (count >= 10) return '#7f1d1d'  // vermelho escuro
-  if (count >= 6)  return '#dc2626'  // vermelho
-  if (count >= 4)  return '#ea580c'  // laranja
-  if (count >= 2)  return '#7c3aed'  // violeta
-  return '#a78bfa'                    // violeta claro
+  if (count >= 10) return '#7f1d1d'
+  if (count >= 6)  return '#dc2626'
+  if (count >= 4)  return '#ea580c'
+  if (count >= 2)  return '#7c3aed'
+  return '#a78bfa'
 }
 
 function makeBubbleIcon(count: number, radius: number) {
@@ -40,6 +40,21 @@ function makeBubbleIcon(count: number, radius: number) {
   })
 }
 
+function makeCellIcon(leaderName: string | null) {
+  const nameHtml = leaderName
+    ? `<div style="background:rgba(109,40,217,0.92);color:white;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;white-space:nowrap;margin-top:2px;box-shadow:0 1px 3px rgba(0,0,0,0.25);max-width:110px;overflow:hidden;text-overflow:ellipsis;">${leaderName}</div>`
+    : ''
+  return L.divIcon({
+    className: '',
+    html: `<div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="background:#7c3aed;width:30px;height:30px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;">🏠</div>
+      ${nameHtml}
+    </div>`,
+    iconSize: [120, 52],
+    iconAnchor: [60, 30],
+  })
+}
+
 interface PersonMarker { id: string; full_name: string; status: string; neighborhood: string | null; latitude: number; longitude: number }
 interface DiscipleshipMarker { id: string; name: string; leader_name: string | null; day_of_week: string | null; latitude: number; longitude: number }
 interface NeighborhoodGroup { neighborhood: string; city: string; count: number; lat: number; lng: number }
@@ -47,7 +62,8 @@ interface NeighborhoodGroup { neighborhood: string; city: string; count: number;
 interface Props {
   people: PersonMarker[]
   discipleships: DiscipleshipMarker[]
-  neighborhoodGroups: NeighborhoodGroup[]
+  novosGroups: NeighborhoodGroup[]
+  membrosGroups: NeighborhoodGroup[]
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -60,8 +76,10 @@ const DAY_LABELS: Record<string, string> = {
   quarta: 'Quarta', quinta: 'Quinta', sexta: 'Sexta', sabado: 'Sábado',
 }
 
-export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
-  const [activeTab, setActiveTab] = useState<'membros' | 'celulas' | 'todos'>('membros')
+type Tab = 'novos' | 'membros' | 'celulas' | 'todos'
+
+export function MapView({ people, discipleships, novosGroups, membrosGroups }: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>('novos')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { fixLeafletIcon(); setMounted(true) }, [])
@@ -72,33 +90,49 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
 
   const defaultCenter: [number, number] = [-15.7801, -47.9292]
 
-  // For members tab: use neighborhood groups as primary data, individual markers as bonus
-  const hasNeighborhoods = neighborhoodGroups.length > 0
-  const hasDiscipleships = discipleships.length > 0
+  const novoPeople = people.filter(p => p.status === 'novo')
+  const membrosPeople = people.filter(p => p.status !== 'novo')
+
+  const activeGroups = activeTab === 'novos' ? novosGroups
+    : activeTab === 'membros' || activeTab === 'todos' ? membrosGroups
+    : []
+  const activePeople = activeTab === 'novos' ? novoPeople
+    : activeTab === 'membros' || activeTab === 'todos' ? membrosPeople
+    : []
+  const showCells = activeTab === 'celulas' || activeTab === 'todos'
+
+  const hasCells = discipleships.length > 0
+  const hasGroups = activeGroups.length > 0
 
   const mapCenter: [number, number] = activeTab === 'celulas'
-    ? (hasDiscipleships ? [discipleships[0].latitude, discipleships[0].longitude] : defaultCenter)
-    : (hasNeighborhoods ? [neighborhoodGroups[0].lat, neighborhoodGroups[0].lng] : defaultCenter)
+    ? (hasCells ? [discipleships[0].latitude, discipleships[0].longitude] : defaultCenter)
+    : (hasGroups ? [activeGroups[0].lat, activeGroups[0].lng] : defaultCenter)
 
   const mapZoom = activeTab === 'celulas'
-    ? (hasDiscipleships ? 12 : 5)
-    : (hasNeighborhoods ? 11 : 5)
+    ? (hasCells ? 12 : 5)
+    : (hasGroups ? 11 : 5)
 
-  // Max count for scaling bubble size
-  const maxCount = Math.max(...neighborhoodGroups.map(n => n.count), 1)
+  const maxCount = Math.max(...activeGroups.map(n => n.count), 1)
+
+  const tabs: { key: Tab; label: string; count: number | null }[] = [
+    { key: 'novos', label: 'Novos Convertidos', count: novosGroups.reduce((s, n) => s + n.count, 0) },
+    { key: 'membros', label: 'Membros', count: membrosGroups.reduce((s, n) => s + n.count, 0) },
+    { key: 'celulas', label: 'Células', count: discipleships.length },
+    { key: 'todos', label: 'Membros + Células', count: null },
+  ]
 
   return (
     <div className="space-y-3">
       <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setActiveTab('membros')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'membros' ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-          Membros por Bairro ({neighborhoodGroups.reduce((s, n) => s + n.count, 0)})
-        </button>
-        <button onClick={() => setActiveTab('celulas')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'celulas' ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-          Células ({discipleships.length})
-        </button>
-        <button onClick={() => setActiveTab('todos')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'todos' ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-          Membros + Células
-        </button>
+        {tabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === t.key ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          >
+            {t.label}{t.count !== null ? ` (${t.count})` : ''}
+          </button>
+        ))}
       </div>
 
       <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: '460px' }}>
@@ -108,7 +142,7 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {(activeTab === 'membros' || activeTab === 'todos') && neighborhoodGroups.map((n, i) => {
+          {activeGroups.map((n, i) => {
             const radius = 16 + Math.round((n.count / maxCount) * 24)
             return (
               <Marker key={`nb-${i}`} position={[n.lat, n.lng]} icon={makeBubbleIcon(n.count, radius)}>
@@ -116,14 +150,14 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
                   <div className="text-sm space-y-0.5">
                     <p className="font-bold" style={{ color: getBubbleColor(n.count) }}>{n.neighborhood || n.city}</p>
                     {n.neighborhood && n.city && <p className="text-slate-500">{n.city}</p>}
-                    <p className="text-slate-800 font-semibold">{n.count} {n.count === 1 ? 'membro' : 'membros'}</p>
+                    <p className="text-slate-800 font-semibold">{n.count} {n.count === 1 ? 'pessoa' : 'pessoas'}</p>
                   </div>
                 </Popup>
               </Marker>
             )
           })}
 
-          {(activeTab === 'membros' || activeTab === 'todos') && people.map(p => (
+          {activePeople.map(p => (
             <Marker key={`p-${p.id}`} position={[p.latitude, p.longitude]}>
               <Popup>
                 <div className="text-sm">
@@ -135,8 +169,8 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
             </Marker>
           ))}
 
-          {(activeTab === 'celulas' || activeTab === 'todos') && discipleships.map(d => (
-            <Marker key={`d-${d.id}`} position={[d.latitude, d.longitude]}>
+          {showCells && discipleships.map(d => (
+            <Marker key={`d-${d.id}`} position={[d.latitude, d.longitude]} icon={makeCellIcon(d.leader_name)}>
               <Popup>
                 <div className="text-sm">
                   <p className="font-semibold">{d.name}</p>
@@ -150,7 +184,7 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
       </div>
 
       {/* Legenda de cores */}
-      {(activeTab === 'membros' || activeTab === 'todos') && hasNeighborhoods && (
+      {activeTab !== 'celulas' && hasGroups && (
         <div className="flex items-center gap-4 flex-wrap text-xs text-slate-500">
           <span className="font-medium text-slate-600">Legenda:</span>
           {[
@@ -169,12 +203,13 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
       )}
 
       {/* Ranking de bairros */}
-      {(activeTab === 'membros' || activeTab === 'todos') && hasNeighborhoods && (
+      {activeTab !== 'celulas' && hasGroups && (
         <div className="mt-2">
           <p className="text-xs font-semibold text-slate-600 mb-2">Ranking de Bairros</p>
           <div className="space-y-1.5">
-            {[...neighborhoodGroups].sort((a, b) => b.count - a.count).map((n, i) => {
-              const pct = Math.round((n.count / neighborhoodGroups.reduce((s, x) => s + x.count, 0)) * 100)
+            {[...activeGroups].sort((a, b) => b.count - a.count).map((n, i) => {
+              const total = activeGroups.reduce((s, x) => s + x.count, 0)
+              const pct = Math.round((n.count / total) * 100)
               return (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-xs text-slate-400 w-4 text-right">{i + 1}.</span>
@@ -192,14 +227,17 @@ export function MapView({ people, discipleships, neighborhoodGroups }: Props) {
         </div>
       )}
 
-      {activeTab === 'membros' && !hasNeighborhoods && (
-        <p className="text-center text-xs text-slate-400">Cadastre convertidos com bairro/cidade para ver no mapa.</p>
+      {activeTab === 'novos' && novosGroups.length === 0 && (
+        <p className="text-center text-xs text-slate-400">Nenhum novo convertido com bairro/cidade cadastrado.</p>
       )}
-      {activeTab === 'celulas' && !hasDiscipleships && (
+      {activeTab === 'membros' && membrosGroups.length === 0 && (
+        <p className="text-center text-xs text-slate-400">Nenhum membro com bairro/cidade cadastrado.</p>
+      )}
+      {activeTab === 'celulas' && !hasCells && (
         <p className="text-center text-xs text-slate-400">Adicione endereço aos discipulados para aparecerem aqui.</p>
       )}
-      {activeTab === 'todos' && !hasNeighborhoods && !hasDiscipleships && (
-        <p className="text-center text-xs text-slate-400">Cadastre convertidos e discipulados com endereço para ver no mapa.</p>
+      {activeTab === 'todos' && membrosGroups.length === 0 && !hasCells && (
+        <p className="text-center text-xs text-slate-400">Cadastre membros e discipulados com endereço para ver no mapa.</p>
       )}
     </div>
   )

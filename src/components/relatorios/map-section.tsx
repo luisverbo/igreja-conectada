@@ -45,10 +45,11 @@ interface NeighborhoodGroup {
 interface Props {
   people: PersonMarker[]
   discipleships: DiscipleshipMarker[]
-  neighborhoodGroups: NeighborhoodGroup[]
+  novosGroups: NeighborhoodGroup[]
+  membrosGroups: NeighborhoodGroup[]
 }
 
-export function MapSection({ people, discipleships, neighborhoodGroups }: Props) {
+export function MapSection({ people, discipleships, novosGroups, membrosGroups }: Props) {
   return (
     <Card>
       <CardHeader>
@@ -58,7 +59,7 @@ export function MapSection({ people, discipleships, neighborhoodGroups }: Props)
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <MapView people={people} discipleships={discipleships} neighborhoodGroups={neighborhoodGroups} />
+        <MapView people={people} discipleships={discipleships} novosGroups={novosGroups} membrosGroups={membrosGroups} />
       </CardContent>
     </Card>
   )
