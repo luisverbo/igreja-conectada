@@ -6,6 +6,7 @@ import { BarChart3, TrendingUp, Users, Heart, BookOpen, Home, Star, AlertCircle 
 import { formatDate } from '@/lib/utils'
 import { ChartsSection } from '@/components/relatorios/charts-section'
 import { MapSection } from '@/components/relatorios/map-section'
+import { NeighborhoodFilter } from '@/components/relatorios/neighborhood-filter'
 
 export default async function RelatoriosPage() {
   const supabase = await createClient()
@@ -27,7 +28,7 @@ export default async function RelatoriosPage() {
   ] = await Promise.all([
     supabase
       .from('people')
-      .select('status, gender, birth_date, origin, neighborhood, city, latitude, longitude, accepted_jesus_at, created_at, can_serve, full_name, id')
+      .select('status, gender, birth_date, origin, neighborhood, city, latitude, longitude, accepted_jesus_at, created_at, can_serve, full_name, id, phone')
       .eq('church_id', cid),
     supabase
       .from('appeals')
@@ -182,6 +183,18 @@ export default async function RelatoriosPage() {
     neighborhood: p.neighborhood ?? null,
   }))
 
+  // Prepare neighborhood people list for filter section
+  const neighborhoodPeople = (people || [])
+    .filter(p => p.neighborhood || p.city)
+    .map(p => ({
+      id: p.id,
+      full_name: p.full_name,
+      status: p.status,
+      phone: p.phone ?? null,
+      neighborhood: p.neighborhood ?? null,
+      city: p.city ?? null,
+    }))
+
   return (
     <div>
       <Header title="Relatórios" description="Análise da jornada espiritual e crescimento" userName={profile.full_name} userRole={profile.role} />
@@ -283,6 +296,9 @@ export default async function RelatoriosPage() {
 
         {/* Map Section */}
         <MapSection people={peopleMarkers} discipleships={discipleshipMarkers} novosGroups={novosGroups} membrosGroups={membrosGroups} />
+
+        {/* Neighborhood People Filter */}
+        <NeighborhoodFilter people={neighborhoodPeople} />
 
         {/* Care alerts */}
         <Card>
