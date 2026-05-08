@@ -4,10 +4,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { BookOpen, Users, GraduationCap, Plus } from 'lucide-react'
+import { BookOpen, Users, GraduationCap } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import { NewClassDialog } from '@/components/novos-membros/new-class-dialog'
+import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
 
 export default async function NovosMembrosPage() {
   const supabase = await createClient()
@@ -19,7 +20,7 @@ export default async function NovosMembrosPage() {
 
   const { data: classes } = await supabase
     .from('new_members_classes')
-    .select('*, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)')
+    .select('*, registration_token, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)')
     .eq('church_id', profile.church_id)
     .order('created_at', { ascending: false })
 
@@ -117,9 +118,14 @@ export default async function NovosMembrosPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Link href={`/novos-membros/turmas/${cls.id}`}>
-                          <Button variant="ghost" size="sm">Gerenciar</Button>
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          {cls.registration_token && cls.status === 'ativa' && (
+                            <CopyLinkButton token={cls.registration_token} />
+                          )}
+                          <Link href={`/novos-membros/turmas/${cls.id}`}>
+                            <Button variant="ghost" size="sm">Gerenciar</Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

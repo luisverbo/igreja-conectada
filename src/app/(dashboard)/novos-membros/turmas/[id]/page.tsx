@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/utils'
 import { EnrollmentDialog } from '@/components/novos-membros/enrollment-dialog'
 import { AttendanceSheet } from '@/components/novos-membros/attendance-sheet'
 import { CompleteClassButton, RemoveEnrollmentButton, MarkStudentCompleteButton } from '@/components/novos-membros/turma-actions'
+import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -23,7 +24,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     { data: lessons },
     { data: enrollments },
   ] = await Promise.all([
-    supabase.from('new_members_classes').select('*, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)').eq('id', id).single(),
+    supabase.from('new_members_classes').select('*, registration_token, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)').eq('id', id).single(),
     supabase.from('new_members_lessons').select('*').eq('class_id', id).order('lesson_number'),
     supabase.from('new_members_enrollments')
       .select('*, people(id, full_name, phone, status)')
@@ -79,6 +80,9 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             <Badge variant={turma.status === 'ativa' ? 'success' : turma.status === 'concluida' ? 'info' : 'outline'}>
               {turma.status === 'ativa' ? 'Ativa' : turma.status === 'concluida' ? 'Concluída' : 'Cancelada'}
             </Badge>
+            {turma.registration_token && turma.status === 'ativa' && (
+              <CopyLinkButton token={turma.registration_token} />
+            )}
             {profile && turma.status === 'ativa' && (
               <EnrollmentDialog classId={id} churchId={profile.church_id} userId={profile.id} />
             )}
