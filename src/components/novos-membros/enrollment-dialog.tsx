@@ -2,11 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { UserPlus, Search } from 'lucide-react'
+import { UserPlus, Search, X, AlertCircle, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
 interface Props {
   classId: string
@@ -18,9 +15,18 @@ export function EnrollmentDialog({ classId, churchId, userId }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [selected, setSelected] = useState<any[]>([])
+
+  function close() {
+    setOpen(false)
+    setSelected([])
+    setSearchQuery('')
+    setSearchResults([])
+    setError(null)
+  }
 
   async function search(q: string) {
     setSearchQuery(q)
@@ -41,108 +47,125 @@ export function EnrollmentDialog({ classId, churchId, userId }: Props) {
     setSearchQuery('')
   }
 
-  function removePerson(id: string) {
-    setSelected(prev => prev.filter(p => p.id !== id))
-  }
-
   async function handleEnroll() {
     setLoading(true)
+    setError(null)
     const supabase = createClient()
 
-    const enrollments = selected.map(p => ({
-      class_id: classId,
-      person_id: p.id,
-    }))
+    const { error: upsertError } = await supabase
+      .from('new_members_enrollments')
+      .upsert(
+        selected.map(p => ({ class_id: classId, person_id: p.id })),
+        { onConflict: 'class_id,person_id' }
+      )
 
-    await supabase.from('new_members_enrollments').upsert(enrollments, { onConflict: 'class_id,person_id' })
+    if (upsertError) {
+      setError('Erro ao matricular: ' + upsertError.message)
+      setLoading(false)
+      return
+    }
 
-    // Update person status and add journey event
     for (const p of selected) {
       await supabase.from('people').update({ status: 'em_novos_membros' }).eq('id', p.id)
       await supabase.from('journey_events').insert({
         person_id: p.id,
         event_type: 'entrou_novos_membros',
-        reference_id: classId,
-        reference_type: 'turma',
         recorded_by: userId,
       })
     }
 
     setLoading(false)
-    setOpen(false)
-    setSelected([])
+    close()
     router.refresh()
   }
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <UserPlus className="h-4 w-4 mr-2" />
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+      >
+        <UserPlus className="h-4 w-4" />
         Matricular Aluno
-      </Button>
+      </button>
 
-      <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) { setSelected([]); setSearchQuery(''); setSearchResults([]) } }}>
-        <DialogContent onClose={() => setOpen(false)}>
-          <DialogHeader>
-            <DialogTitle>Matricular Alunos na Turma</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                value={searchQuery}
-                onChange={e => search(e.target.value)}
-                placeholder="Buscar pessoa por nome..."
-                className="pl-9"
-              />
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-900">Matricular Alunos na Turma</h2>
+              <button onClick={close} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
             </div>
 
-            {searchResults.length > 0 && (
-              <div className="rounded-lg border border-slate-200 bg-white shadow-sm divide-y divide-slate-100 max-h-48 overflow-y-auto">
-                {searchResults.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => addPerson(p)}
-                    className="w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="font-medium text-slate-900">{p.full_name}</span>
-                    {p.phone && <span className="text-slate-400 ml-2 text-xs">{p.phone}</span>}
-                  </button>
-                ))}
+            <div className="p-5 space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  value={searchQuery}
+                  onChange={e => search(e.target.value)}
+                  placeholder="Buscar pessoa por nome..."
+                  className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
               </div>
-            )}
 
-            {selected.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Selecionados ({selected.length})</p>
-                <div className="space-y-1">
+              {searchResults.length > 0 && (
+                <div className="rounded-lg border border-slate-200 divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                  {searchResults.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => addPerson(p)}
+                      className="w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 transition-colors flex items-center justify-between"
+                    >
+                      <span className="font-medium text-slate-900">{p.full_name}</span>
+                      {p.phone && <span className="text-slate-400 text-xs">{p.phone}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {selected.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Selecionados ({selected.length})</p>
                   {selected.map(p => (
                     <div key={p.id} className="flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-3 py-2">
                       <span className="text-sm font-medium text-violet-800">{p.full_name}</span>
                       <button
                         type="button"
-                        onClick={() => removePerson(p.id)}
-                        className="text-xs text-violet-400 hover:text-violet-600"
+                        onClick={() => setSelected(prev => prev.filter(x => x.id !== p.id))}
+                        className="text-violet-400 hover:text-violet-700"
                       >
-                        Remover
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleEnroll} disabled={loading || selected.length === 0}>
-              {loading ? 'Matriculando...' : `Matricular ${selected.length > 0 ? `(${selected.length})` : ''}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={close} className="flex-1 h-10 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleEnroll}
+                  disabled={loading || selected.length === 0}
+                  className="flex-1 h-10 rounded-lg bg-violet-600 text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-violet-700"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                  {loading ? 'Matriculando...' : `Matricular${selected.length > 0 ? ` (${selected.length})` : ''}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, BookOpen, Users, CheckCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft, BookOpen, Users, CheckCircle, GraduationCap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils'
 import { EnrollmentDialog } from '@/components/novos-membros/enrollment-dialog'
 import { AttendanceSheet } from '@/components/novos-membros/attendance-sheet'
+import { CompleteClassButton, RemoveEnrollmentButton, MarkStudentCompleteButton } from '@/components/novos-membros/turma-actions'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -60,11 +60,9 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     <div>
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <div className="flex items-center gap-3 mb-3">
-          <Link href="/novos-membros">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Novos Membros
-            </Button>
+          <Link href="/novos-membros" className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            Novos Membros
           </Link>
         </div>
         <div className="flex items-center justify-between gap-4">
@@ -77,11 +75,20 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
               {turma.location && ` · ${turma.location}`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={turma.status === 'ativa' ? 'success' : 'secondary'}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant={turma.status === 'ativa' ? 'success' : turma.status === 'concluida' ? 'info' : 'outline'}>
               {turma.status === 'ativa' ? 'Ativa' : turma.status === 'concluida' ? 'Concluída' : 'Cancelada'}
             </Badge>
-            {profile && <EnrollmentDialog classId={id} churchId={profile.church_id} userId={profile.id} />}
+            {profile && turma.status === 'ativa' && (
+              <EnrollmentDialog classId={id} churchId={profile.church_id} userId={profile.id} />
+            )}
+            {profile && (
+              <CompleteClassButton
+                turmaId={id}
+                turmaStatus={turma.status}
+                canManage={['super_admin', 'pastor', 'coordinator', 'new_members_teacher'].includes(profile.role)}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -137,7 +144,8 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                   <TableHead>Telefone</TableHead>
                   <TableHead>Matrícula</TableHead>
                   <TableHead>Frequência</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Concluído</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -153,7 +161,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                           </Link>
                         </TableCell>
                         <TableCell className="text-sm text-slate-600">{e.people?.phone || '—'}</TableCell>
-                        <TableCell className="text-sm">{formatDate(e.enrolled_at)}</TableCell>
+                        <TableCell className="text-sm text-slate-500">{formatDate(e.enrolled_at)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="h-1.5 w-20 rounded-full bg-slate-100">
@@ -166,16 +174,27 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={e.completed ? 'success' : 'secondary'}>
-                            {e.completed ? 'Concluído' : 'Em curso'}
-                          </Badge>
+                          <MarkStudentCompleteButton
+                            enrollmentId={e.id}
+                            personId={e.people?.id}
+                            completed={e.completed}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {turma.status === 'ativa' && (
+                            <RemoveEnrollmentButton
+                              enrollmentId={e.id}
+                              personId={e.people?.id}
+                              personName={e.people?.full_name}
+                            />
+                          )}
                         </TableCell>
                       </TableRow>
                     )
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-slate-400">
+                    <TableCell colSpan={6} className="text-center py-8 text-slate-400">
                       Nenhum aluno matriculado
                     </TableCell>
                   </TableRow>
