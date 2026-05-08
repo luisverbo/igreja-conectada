@@ -19,7 +19,7 @@ export default async function NovosMembrosPage() {
 
   const { data: classes } = await supabase
     .from('new_members_classes')
-    .select('*, profiles(full_name)')
+    .select('*, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)')
     .eq('church_id', profile.church_id)
     .order('created_at', { ascending: false })
 
@@ -101,7 +101,7 @@ export default async function NovosMembrosPage() {
                         <p className="font-medium text-slate-900">{cls.name}</p>
                         {cls.location && <p className="text-xs text-slate-400">{cls.location}</p>}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">{cls.profiles?.full_name || '—'}</TableCell>
+                      <TableCell className="text-sm text-slate-600">{cls.teacher?.full_name || '—'}</TableCell>
                       <TableCell className="text-sm">
                         {cls.day_of_week && <span className="mr-1">{dayLabels[cls.day_of_week] || cls.day_of_week}</span>}
                         {cls.time_start && <span className="text-slate-400">{cls.time_start.slice(0, 5)}</span>}

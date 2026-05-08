@@ -23,7 +23,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     { data: lessons },
     { data: enrollments },
   ] = await Promise.all([
-    supabase.from('new_members_classes').select('*, profiles(full_name)').eq('id', id).single(),
+    supabase.from('new_members_classes').select('*, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)').eq('id', id).single(),
     supabase.from('new_members_lessons').select('*').eq('class_id', id).order('lesson_number'),
     supabase.from('new_members_enrollments')
       .select('*, people(id, full_name, phone, status)')
@@ -69,7 +69,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
           <div>
             <h1 className="text-xl font-bold text-slate-900">{turma.name}</h1>
             <p className="text-sm text-slate-500">
-              {turma.profiles?.full_name && `Professor: ${turma.profiles.full_name}`}
+              {turma.teacher?.full_name && `Professor: ${turma.teacher.full_name}`}
               {turma.day_of_week && ` · ${dayLabels[turma.day_of_week] || turma.day_of_week}`}
               {turma.time_start && ` às ${turma.time_start.slice(0, 5)}`}
               {turma.location && ` · ${turma.location}`}
