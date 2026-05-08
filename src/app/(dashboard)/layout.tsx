@@ -41,9 +41,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     )
   }
 
+  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'luisverbo@gmail.com'
+  const isSuperAdmin = role === 'super_admin' && user.email === SUPER_ADMIN_EMAIL
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar role={role} />
+      <Sidebar role={role} isSuperAdmin={isSuperAdmin} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           {children}

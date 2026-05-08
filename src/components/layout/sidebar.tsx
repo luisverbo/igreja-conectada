@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Users, Heart, BookOpen,
+  LayoutDashboard, Users, BookOpen,
   Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,6 @@ import { useRouter } from 'next/navigation'
 const allNavItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'new_members_teacher', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
   { label: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'viewer'] },
-  { label: 'Conselheiros', href: '/conselheiros', icon: Heart, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator', 'counselor', 'viewer'] },
   { label: 'Novos Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'new_members_teacher', 'viewer'] },
   { label: 'Discipulados', href: '/discipulados', icon: Home, description: 'Acompanhamento pastoral', roles: ['super_admin', 'pastor', 'coordinator', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
   { label: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'viewer'] },
@@ -22,9 +21,10 @@ const allNavItems = [
 
 interface SidebarProps {
   role: string
+  isSuperAdmin?: boolean
 }
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({ role, isSuperAdmin = false }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -75,7 +75,7 @@ export function Sidebar({ role }: SidebarProps) {
       </nav>
 
       <div className="px-3 py-4 border-t space-y-1" style={{ borderColor: 'var(--sidebar-border)' }}>
-        {role === 'super_admin' && (
+        {isSuperAdmin && (
           <Link
             href="/admin"
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-amber-300 hover:bg-white/10 hover:text-amber-200 transition-colors"

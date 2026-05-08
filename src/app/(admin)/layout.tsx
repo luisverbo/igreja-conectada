@@ -14,7 +14,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'super_admin') redirect('/dashboard')
+  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'luisverbo@gmail.com'
+  if (profile?.role !== 'super_admin' || user.email !== SUPER_ADMIN_EMAIL) redirect('/dashboard')
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950">

@@ -3,9 +3,10 @@ import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Settings, Users, Church } from 'lucide-react'
+import { Settings, Users, Church, MessageSquare } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { CreateUserDialog } from '@/components/configuracoes/create-user-dialog'
+import { WhatsAppSection } from '@/components/configuracoes/whatsapp-section'
 
 const roleLabels: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -132,6 +133,21 @@ export default async function ConfiguracoesPage() {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* WhatsApp */}
+        {canManageUsers && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-emerald-600" />
+                WhatsApp
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WhatsAppSection />
             </CardContent>
           </Card>
         )}
