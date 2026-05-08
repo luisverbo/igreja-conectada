@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { data: profile } = await supabase.from('profiles').select('church_id, role').eq('id', user.id).single()
-  if (!['super_admin', 'pastor', 'coordinator'].includes(profile?.role || '')) {
+  if (!profile?.church_id || !['super_admin', 'pastor', 'coordinator'].includes(profile?.role || '')) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
