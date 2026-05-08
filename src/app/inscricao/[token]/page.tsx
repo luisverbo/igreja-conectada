@@ -8,7 +8,7 @@ export default async function PublicEnrollmentPage({ params }: { params: Promise
 
   const { data: turma } = await supabase
     .from('new_members_classes')
-    .select('id, name, day_of_week, time_start, location, total_lessons, status, church_id, teacher_id, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)')
+    .select('id, name, day_of_week, time_start, location, status, church_id')
     .eq('registration_token', token)
     .single()
 
@@ -40,9 +40,6 @@ export default async function PublicEnrollmentPage({ params }: { params: Promise
           )}
           <h1 className="text-2xl font-bold text-slate-900">{turma.name}</h1>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-slate-500">
-            {(turma as any).teacher?.full_name && (
-              <span>👤 {(turma as any).teacher.full_name}</span>
-            )}
             {turma.day_of_week && (
               <span>📅 {dayLabels[turma.day_of_week] || turma.day_of_week}</span>
             )}

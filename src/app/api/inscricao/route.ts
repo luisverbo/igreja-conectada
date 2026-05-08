@@ -23,18 +23,57 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Turma não encontrada ou encerrada.' }, { status: 404 })
   }
 
-  // Find existing person by phone in this church, or create new
-  const { data: existing } = await supabase
+  // Find existing person by phone, email, or exact name (in order of confidence)
+  let existingId: string | null = null
+
+  // 1. Match by phone (most reliable)
+  const { data: byPhone } = await supabase
     .from('people')
-    .select('id, status')
+    .select('id')
     .eq('church_id', churchId)
     .eq('phone', phone.trim())
     .maybeSingle()
 
+  if (byPhone) {
+    existingId = byPhone.id
+  }
+
+  // 2. Match by email if not found by phone
+  if (!existingId && email?.trim()) {
+    const { data: byEmail } = await supabase
+      .from('people')
+      .select('id')
+      .eq('church_id', churchId)
+      .eq('email', email.trim())
+      .maybeSingle()
+    if (byEmail) existingId = byEmail.id
+  }
+
+  // 3. Match by exact full name if still not found
+  if (!existingId) {
+    const { data: byName } = await supabase
+      .from('people')
+      .select('id')
+      .eq('church_id', churchId)
+      .ilike('full_name', full_name.trim())
+      .maybeSingle()
+    if (byName) existingId = byName.id
+  }
+
   let personId: string
 
-  if (existing) {
-    personId = existing.id
+  if (existingId) {
+    personId = existingId
+    // Update missing fields if the match was by name/email and phone was blank
+    await supabase
+      .from('people')
+      .update({
+        phone: phone.trim(),
+        ...(email?.trim() ? { email: email.trim() } : {}),
+        ...(birth_date ? { birth_date } : {}),
+      })
+      .eq('id', personId)
+      .eq('church_id', churchId)
   } else {
     const { data: newPerson, error: personError } = await supabase
       .from('people')
