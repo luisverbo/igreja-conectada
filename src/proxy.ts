@@ -25,9 +25,12 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
-  const isSetupRoute = request.nextUrl.pathname.startsWith('/setup')
-  const isPublicRoute = isAuthRoute || isSetupRoute || request.nextUrl.pathname === '/'
+  const pathname = request.nextUrl.pathname
+  const isAuthRoute = pathname.startsWith('/login')
+  const isPublicRoute = isAuthRoute
+    || pathname.startsWith('/setup')
+    || pathname.startsWith('/inscricao')
+    || pathname === '/'
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
@@ -41,7 +44,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  supabaseResponse.headers.set('x-pathname', request.nextUrl.pathname)
+  supabaseResponse.headers.set('x-pathname', pathname)
   return supabaseResponse
 }
 
