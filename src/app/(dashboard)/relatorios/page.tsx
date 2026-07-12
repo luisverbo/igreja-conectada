@@ -42,13 +42,15 @@ export default async function RelatoriosPage() {
       .eq('church_id', cid),
     supabase
       .from('discipleship_members')
-      .select('discipleship_id, status, person_id')
-      .eq('status', 'em_acompanhamento'),
+      .select('discipleship_id, status, person_id, discipleships!inner(church_id)')
+      .eq('status', 'em_acompanhamento')
+      .eq('discipleships.church_id', cid),
     supabase.from('new_members_enrollments').select('completed, class_id'),
     supabase
       .from('discipleship_observations')
-      .select('observation_type, needs_care, observation_date, people(full_name), profiles(full_name)')
+      .select('observation_type, needs_care, observation_date, people!inner(full_name, church_id), profiles(full_name)')
       .eq('needs_care', true)
+      .eq('people.church_id', cid)
       .order('created_at', { ascending: false })
       .limit(20),
   ])

@@ -57,7 +57,8 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
   const statusFilters = [
     { label: 'Todos', value: '' },
     { label: 'Novos', value: 'novo' },
-    { label: 'Novos Membros', value: 'em_novos_membros' },
+    { label: 'Em NM', value: 'em_novos_membros' },
+    { label: 'Concluiu NM', value: 'concluiu_novos_membros' },
     { label: 'Discipulado', value: 'em_discipulado' },
     { label: 'Acompanhamento', value: 'em_acompanhamento' },
     { label: 'Servindo', value: 'servindo' },
@@ -69,26 +70,41 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
       <Header title="Pessoas" description="Gerencie a jornada espiritual de cada pessoa" userName={profile.full_name} userRole={profile.role} />
 
       <div className="p-6 space-y-4">
-        {/* Top bar */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            {statusFilters.map((f) => (
-              <Link key={f.value} href={f.value ? `/pessoas?status=${f.value}` : '/pessoas'}>
-                <Badge
-                  variant={params.status === f.value || (!params.status && !f.value) ? 'default' : 'outline'}
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                  {f.label}
-                </Badge>
-              </Link>
-            ))}
-          </div>
+        {/* Search + actions */}
+        <div className="flex items-center gap-3">
+          <form method="GET" action="/pessoas" className="flex-1 max-w-sm">
+            {params.status && <input type="hidden" name="status" value={params.status} />}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                name="q"
+                defaultValue={params.q || ''}
+                placeholder="Buscar por nome..."
+                className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
+          </form>
           <Link href="/pessoas/nova">
             <Button size="sm">
               <UserPlus className="h-4 w-4 mr-2" />
               Nova Pessoa
             </Button>
           </Link>
+        </div>
+
+        {/* Status filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {statusFilters.map((f) => (
+            <Link key={f.value} href={f.value ? `/pessoas?status=${f.value}${params.q ? `&q=${params.q}` : ''}` : `/pessoas${params.q ? `?q=${params.q}` : ''}`}>
+              <Badge
+                variant={params.status === f.value || (!params.status && !f.value) ? 'default' : 'outline'}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                {f.label}
+              </Badge>
+            </Link>
+          ))}
         </div>
 
         {/* Table */}

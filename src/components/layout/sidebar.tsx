@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, BookOpen,
-  Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2,
+  Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2, HeartHandshake,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 const allNavItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'new_members_teacher', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
   { label: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'viewer'] },
+  { label: 'Conselheiros', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator'] },
   { label: 'Novos Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'new_members_teacher', 'viewer'] },
   { label: 'Discipulados', href: '/discipulados', icon: Home, description: 'Acompanhamento pastoral', roles: ['super_admin', 'pastor', 'coordinator', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
   { label: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'viewer'] },

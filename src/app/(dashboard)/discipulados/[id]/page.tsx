@@ -39,7 +39,8 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
       .select('*, people(id, full_name, phone, status), discipleship_observations(id, observation_type, description, needs_care, observation_date, profiles(full_name))')
       .eq('discipleship_id', id)
       .order('status')
-      .order('created_at'),
+      .order('created_at')
+      .order('observation_date', { referencedTable: 'discipleship_observations', ascending: false }),
   ])
 
   if (!discipleship) notFound()
