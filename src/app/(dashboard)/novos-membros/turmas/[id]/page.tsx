@@ -11,6 +11,7 @@ import { AttendanceSheet } from '@/components/novos-membros/attendance-sheet'
 import { CompleteClassButton, RemoveEnrollmentButton, MarkStudentCompleteButton } from '@/components/novos-membros/turma-actions'
 import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
 import { EditClassDialog } from '@/components/novos-membros/edit-class-dialog'
+import { DeleteClassButton } from '@/components/novos-membros/delete-class-button'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -58,32 +59,56 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     quarta: 'Quarta-feira', quinta: 'Quinta-feira', sexta: 'Sexta-feira', sabado: 'Sábado',
   }
 
+  const canManage = !!profile && ['super_admin', 'pastor', 'coordinator', 'new_members_teacher'].includes(profile.role)
+  const teacherName = turma.teacher?.full_name
+
   return (
     <div>
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
+      <div className="border-b border-slate-200 bg-white px-4 sm:px-6 py-4">
         <div className="flex items-center gap-3 mb-3">
           <Link href="/novos-membros" className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Novos Membros
           </Link>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">{turma.name}</h1>
-            <p className="text-sm text-slate-500">
-              {turma.teacher?.full_name && `Professor: ${turma.teacher.full_name}`}
-              {turma.day_of_week && ` · ${dayLabels[turma.day_of_week] || turma.day_of_week}`}
-              {turma.time_start && ` às ${turma.time_start.slice(0, 5)}`}
-              {turma.location && ` · ${turma.location}`}
-            </p>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-slate-900">{turma.name}</h1>
+                <Badge variant={turma.status === 'ativa' ? 'success' : turma.status === 'concluida' ? 'info' : 'outline'}>
+                  {turma.status === 'ativa' ? 'Ativa' : turma.status === 'concluida' ? 'Concluída' : 'Cancelada'}
+                </Badge>
+              </div>
+
+              {/* Info chips */}
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {teacherName && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-100 pl-1 pr-3 py-1">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-[10px] font-bold">
+                      {teacherName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                    </span>
+                    <span className="text-xs font-semibold text-violet-800">Prof. {teacherName}</span>
+                  </span>
+                )}
+                {turma.day_of_week && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                    📅 {dayLabels[turma.day_of_week] || turma.day_of_week}{turma.time_start && ` · ${turma.time_start.slice(0, 5)}`}
+                  </span>
+                )}
+                {turma.location && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                    📍 {turma.location}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+
+          {/* Actions */}
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={turma.status === 'ativa' ? 'success' : turma.status === 'concluida' ? 'info' : 'outline'}>
-              {turma.status === 'ativa' ? 'Ativa' : turma.status === 'concluida' ? 'Concluída' : 'Cancelada'}
-            </Badge>
-            {profile && ['super_admin', 'pastor', 'coordinator', 'new_members_teacher'].includes(profile.role) && (
-              <EditClassDialog turma={turma} />
-            )}
+            {canManage && <EditClassDialog turma={turma} />}
             {turma.registration_token && turma.status === 'ativa' && (
               <CopyLinkButton token={turma.registration_token} />
             )}
@@ -94,16 +119,19 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
               <CompleteClassButton
                 turmaId={id}
                 turmaStatus={turma.status}
-                canManage={['super_admin', 'pastor', 'coordinator', 'new_members_teacher'].includes(profile.role)}
+                canManage={canManage}
               />
+            )}
+            {profile && ['super_admin', 'pastor', 'coordinator'].includes(profile.role) && (
+              <DeleteClassButton turmaId={id} turmaName={turma.name} studentCount={enrollments?.length || 0} />
             )}
           </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-5">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[
             { label: 'Matriculados', value: enrollments?.length || 0, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Aulas Realizadas', value: completedLessons.length, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -112,13 +140,13 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             const Icon = s.icon
             return (
               <Card key={s.label}>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <div className={`h-9 w-9 rounded-lg ${s.bg} hidden sm:flex items-center justify-center flex-shrink-0`}>
                     <Icon className={`h-4 w-4 ${s.color}`} />
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-slate-900">{s.value}</p>
-                    <p className="text-xs text-slate-500">{s.label}</p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-900">{s.value}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 leading-tight">{s.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -126,17 +154,28 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
           })}
         </div>
 
-        {/* Attendance Sheet (interactive) */}
+        {/* Attendance Sheet (interactive, auto-save) */}
         {lessons && lessons.length > 0 && enrollments && enrollments.length > 0 && (
           <AttendanceSheet
             lessons={lessons}
             enrollments={enrollments}
             attendanceRecords={attendanceRecords || []}
             userId={profile?.id || ''}
+            canManage={canManage}
           />
         )}
 
+        {/* Empty state: no students yet */}
+        {(!enrollments || enrollments.length === 0) && (
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white py-12 text-center">
+            <Users className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+            <p className="text-sm font-semibold text-slate-600 mb-1">Nenhum aluno matriculado ainda</p>
+            <p className="text-xs text-slate-400">Use &ldquo;Matricular Aluno&rdquo; acima ou compartilhe o link de inscrição.</p>
+          </div>
+        )}
+
         {/* Enrollments table */}
+        {enrollments && enrollments.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -144,7 +183,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
               Lista de Alunos
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -211,6 +250,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             </Table>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   )

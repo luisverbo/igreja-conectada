@@ -102,7 +102,18 @@ export default async function NovosMembrosPage() {
                         <p className="font-medium text-slate-900">{cls.name}</p>
                         {cls.location && <p className="text-xs text-slate-400">{cls.location}</p>}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">{cls.teacher?.full_name || '—'}</TableCell>
+                      <TableCell>
+                        {cls.teacher?.full_name ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold flex-shrink-0">
+                              {cls.teacher.full_name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                            </span>
+                            <span className="text-sm font-medium text-slate-700">{cls.teacher.full_name}</span>
+                          </span>
+                        ) : (
+                          <span className="text-sm text-slate-400">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {cls.day_of_week && <span className="mr-1">{dayLabels[cls.day_of_week] || cls.day_of_week}</span>}
                         {cls.time_start && <span className="text-slate-400">{cls.time_start.slice(0, 5)}</span>}
