@@ -11,25 +11,29 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const allNavItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
-  { label: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
-  { label: 'Conselheiros', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'] },
-  { label: 'Novos Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'viewer'] },
-  { label: 'GCA', href: '/discipulados', icon: Home, description: 'Grupos e acompanhamento', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
-  { label: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
-  { label: 'Configurações', href: '/configuracoes', icon: Settings, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor'] },
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
+  { key: 'pessoas', label: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
+  { key: 'conselheiros', label: 'Conselheiros', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full'] },
+  { key: 'novos-membros', label: 'Novos Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'viewer'] },
+  { key: 'discipulados', label: 'GCA', href: '/discipulados', icon: Home, description: 'Grupos e acompanhamento', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
+  { key: 'relatorios', label: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
+  { key: 'configuracoes', label: 'Configurações', href: '/configuracoes', icon: Settings, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor'] },
 ]
 
 interface SidebarProps {
   role: string
   isSuperAdmin?: boolean
+  customAccess?: string[]
 }
 
-export function Sidebar({ role, isSuperAdmin = false }: SidebarProps) {
+export function Sidebar({ role, isSuperAdmin = false, customAccess = [] }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
-  const navItems = allNavItems.filter(item => item.roles.includes(role))
+  // Visible if the role allows it OR the user has custom access to the module
+  const navItems = allNavItems.filter(item =>
+    item.roles.includes(role) || customAccess.includes(item.key)
+  )
 
   async function handleLogout() {
     const supabase = createClient()

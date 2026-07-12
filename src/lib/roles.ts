@@ -7,7 +7,8 @@ export const ROLE_LABELS: Record<string, string> = {
   pastor: 'Pastor',
   coordinator: 'Coordenador',
   supervisor: 'Supervisor',
-  counselor: 'Conselheiro',
+  counselor: 'Conselheiro (formulário)',
+  counselor_full: 'Conselheiro (acesso total)',
   counselor_leader: 'Líder de Conselheiros',
   new_members_teacher: 'Professor Novos Membros',
   new_members_leader: 'Líder de Novos Membros',
@@ -32,12 +33,22 @@ export const COUNSELOR_MANAGERS = [...FULL_ACCESS, 'counselor_leader']
 // Pode autorizar entrada no discipulado sem NM concluído
 export const DISCIPLESHIP_AUTHORIZERS = [...FULL_ACCESS, 'discipleship_supervisor']
 
+// Módulos do sistema para acesso customizado por usuário
+export const MODULES = [
+  { key: 'pessoas', label: 'Pessoas' },
+  { key: 'conselheiros', label: 'Conselheiros' },
+  { key: 'novos-membros', label: 'Novos Membros' },
+  { key: 'discipulados', label: 'GCA' },
+  { key: 'relatorios', label: 'Relatórios' },
+  { key: 'configuracoes', label: 'Configurações' },
+]
+
 // Quais funções cada papel pode atribuir ao criar usuários
 export function assignableRoles(callerRole: string): string[] {
   if (['super_admin', 'pastor', 'coordinator', 'supervisor'].includes(callerRole)) {
     return [
       'pastor', 'coordinator', 'supervisor',
-      'counselor', 'counselor_leader',
+      'counselor', 'counselor_full', 'counselor_leader',
       'new_members_leader', 'new_members_teacher', 'new_members_helper',
       'discipleship_supervisor', 'discipleship_leader', 'viewer',
     ]
@@ -46,10 +57,15 @@ export function assignableRoles(callerRole: string): string[] {
     return ['new_members_teacher', 'new_members_helper']
   }
   if (callerRole === 'counselor_leader') {
-    return ['counselor']
+    return ['counselor', 'counselor_full']
   }
   if (callerRole === 'discipleship_supervisor') {
     return ['discipleship_leader']
   }
   return []
+}
+
+// Só quem tem acesso total pode conceder acessos customizados
+export function canGrantCustomAccess(callerRole: string): boolean {
+  return FULL_ACCESS.includes(callerRole)
 }

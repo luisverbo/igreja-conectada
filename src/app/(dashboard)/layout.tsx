@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, church_id, full_name, is_active')
+    .select('role, church_id, full_name, is_active, custom_access')
     .eq('id', user.id)
     .single()
 
@@ -51,7 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar role={role} isSuperAdmin={isSuperAdmin} />
+      <Sidebar role={role} isSuperAdmin={isSuperAdmin} customAccess={profile?.custom_access || []} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           {children}

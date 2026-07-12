@@ -12,21 +12,22 @@ interface UserRow {
   is_active: boolean
 }
 
-import { ROLE_LABELS } from '@/lib/roles'
+import { ROLE_LABELS, MODULES } from '@/lib/roles'
 
 interface Props {
-  user: UserRow
+  user: UserRow & { custom_access?: string[] | null }
   allowedRoles?: string[]
+  allowCustomAccess?: boolean
 }
 
 const ALL_ROLES = [
   'pastor', 'coordinator', 'supervisor',
-  'counselor', 'counselor_leader',
+  'counselor', 'counselor_full', 'counselor_leader',
   'new_members_leader', 'new_members_teacher', 'new_members_helper',
   'discipleship_supervisor', 'discipleship_leader', 'viewer',
 ]
 
-export function EditUserDialog({ user, allowedRoles }: Props) {
+export function EditUserDialog({ user, allowedRoles, allowCustomAccess = false }: Props) {
   const ROLE_OPTIONS = (allowedRoles || ALL_ROLES).map(r => ({ value: r, label: ROLE_LABELS[r] || r }))
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -38,6 +39,11 @@ export function EditUserDialog({ user, allowedRoles }: Props) {
     role: user.role,
     is_active: user.is_active,
   })
+  const [customAccess, setCustomAccess] = useState<string[]>(user.custom_access || [])
+
+  function toggleAccess(key: string) {
+    setCustomAccess(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,6 +59,7 @@ export function EditUserDialog({ user, allowedRoles }: Props) {
         phone: form.phone,
         role: form.role,
         is_active: form.is_active,
+        ...(allowCustomAccess ? { custom_access: customAccess } : {}),
       }),
     })
 
@@ -122,6 +129,28 @@ export function EditUserDialog({ user, allowedRoles }: Props) {
                   {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
+
+              {allowCustomAccess && (
+                <div>
+                  <label className={labelClass}>Acessos adicionais</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {MODULES.map(m => (
+                      <label key={m.key} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer transition-colors ${
+                        customAccess.includes(m.key) ? 'border-violet-400 bg-violet-50 text-violet-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={customAccess.includes(m.key)}
+                          onChange={() => toggleAccess(m.key)}
+                          className="h-3.5 w-3.5 accent-violet-600"
+                        />
+                        {m.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Abas extras além do que a função permite.</p>
+                </div>
+              )}
 
               <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3">
                 <div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { assignableRoles } from '@/lib/roles'
+import { assignableRoles, canGrantCustomAccess, MODULES } from '@/lib/roles'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { userId, role, is_active, full_name, phone } = body
+  const { userId, role, is_active, full_name, phone, custom_access } = body
 
   if (!userId) {
     return NextResponse.json({ error: 'Usuário não informado.' }, { status: 400 })
@@ -59,6 +59,15 @@ export async function POST(req: NextRequest) {
   if (is_active !== undefined) updates.is_active = !!is_active
   if (full_name !== undefined) updates.full_name = String(full_name).trim()
   if (phone !== undefined) updates.phone = String(phone).trim() || null
+  if (custom_access !== undefined) {
+    if (!canGrantCustomAccess(caller.role)) {
+      return NextResponse.json({ error: 'Você não pode conceder acessos adicionais.' }, { status: 403 })
+    }
+    const validKeys = MODULES.map(m => m.key)
+    updates.custom_access = Array.isArray(custom_access) && custom_access.length > 0
+      ? custom_access.filter((k: string) => validKeys.includes(k))
+      : null
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'Nada para atualizar.' }, { status: 400 })

@@ -99,7 +99,7 @@ export default async function ConfiguracoesPage() {
                   <Users className="h-4 w-4 text-violet-600" />
                   Usuários do Sistema
                 </CardTitle>
-                <CreateUserDialog />
+                <CreateUserDialog allowCustomAccess />
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -135,7 +135,7 @@ export default async function ConfiguracoesPage() {
                       <TableCell className="text-sm text-slate-500">{formatDate(u.created_at)}</TableCell>
                       <TableCell>
                         {u.id !== profile.id && u.role !== 'super_admin' && (
-                          <EditUserDialog user={u} />
+                          <EditUserDialog user={u} allowCustomAccess />
                         )}
                       </TableCell>
                     </TableRow>

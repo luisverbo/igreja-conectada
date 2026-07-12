@@ -81,8 +81,8 @@ export default async function ConselheirosPage() {
             currentUserId={user.id}
             title="Equipe de Conselheiros"
             description="Conselheiros cadastram novos convertidos pelo formulário mobile durante os apelos."
-            deptRoles={['counselor_leader', 'counselor']}
-            assignRoles={['counselor']}
+            deptRoles={['counselor_leader', 'counselor_full', 'counselor']}
+            assignRoles={['counselor', 'counselor_full']}
             canEdit={['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'].includes(profile.role)}
           />
         )}

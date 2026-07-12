@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
-import { assignableRoles } from '@/lib/roles'
+import { assignableRoles, canGrantCustomAccess, MODULES } from '@/lib/roles'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerClient()
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
-  const { full_name, email, password, role, phone } = await req.json()
+  const { full_name, email, password, role, phone, custom_access } = await req.json()
   if (!full_name || !email || !password || !role) {
     return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 })
   }
@@ -29,6 +29,16 @@ export async function POST(req: NextRequest) {
   // Department leaders can only create roles within their department
   if (!allowed.includes(role)) {
     return NextResponse.json({ error: 'Você não pode atribuir essa função.' }, { status: 403 })
+  }
+
+  // Custom module access: only full-access callers, only valid modules
+  let customAccess: string[] | null = null
+  if (Array.isArray(custom_access) && custom_access.length > 0) {
+    if (!canGrantCustomAccess(profile.role)) {
+      return NextResponse.json({ error: 'Você não pode conceder acessos adicionais.' }, { status: 403 })
+    }
+    const validKeys = MODULES.map(m => m.key)
+    customAccess = custom_access.filter((k: string) => validKeys.includes(k))
   }
 
   const supabaseAdmin = createClient(
@@ -53,6 +63,7 @@ export async function POST(req: NextRequest) {
     full_name,
     role,
     phone: phone || null,
+    custom_access: customAccess,
     is_active: true,
   })
 
