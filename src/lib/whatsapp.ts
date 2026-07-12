@@ -1,26 +1,56 @@
 // ============================================================
-// WHATSAPP - Evolution API Integration
+// WHATSAPP - Evolution API Integration (server-side only)
 // ============================================================
 
-const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'http://localhost:8080'
-const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY || ''
-const WHATSAPP_INSTANCE = process.env.WHATSAPP_INSTANCE || 'church-instance'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || process.env.WHATSAPP_API_URL || ''
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || process.env.WHATSAPP_API_KEY || ''
 
 interface SendMessageParams {
+  churchId: string
   phone: string
   message: string
 }
 
-export async function sendWhatsAppMessage({ phone, message }: SendMessageParams): Promise<boolean> {
+/**
+ * Sends a WhatsApp message using the church's default Evolution API instance.
+ * Falls back silently (returns false) when no instance is connected or the
+ * API is unreachable — messaging must never break the main flow.
+ */
+export async function sendWhatsAppMessage({ churchId, phone, message }: SendMessageParams): Promise<boolean> {
+  if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) return false
+
   try {
+    const admin = createAdminClient()
+    const { data: instance } = await admin
+      .from('whatsapp_instances')
+      .select('instance_name')
+      .eq('church_id', churchId)
+      .eq('is_default', true)
+      .maybeSingle()
+
+    // Fall back to any instance of the church when none is marked default
+    let instanceName = instance?.instance_name
+    if (!instanceName) {
+      const { data: anyInstance } = await admin
+        .from('whatsapp_instances')
+        .select('instance_name')
+        .eq('church_id', churchId)
+        .limit(1)
+        .maybeSingle()
+      instanceName = anyInstance?.instance_name
+    }
+    if (!instanceName) return false
+
     const cleaned = phone.replace(/\D/g, '')
     const number = cleaned.startsWith('55') ? cleaned : `55${cleaned}`
 
-    const res = await fetch(`${WHATSAPP_API_URL}/message/sendText/${WHATSAPP_INSTANCE}`, {
+    const res = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': WHATSAPP_API_KEY,
+        'apikey': EVOLUTION_API_KEY,
       },
       body: JSON.stringify({
         number: `${number}@s.whatsapp.net`,
@@ -34,59 +64,31 @@ export async function sendWhatsAppMessage({ phone, message }: SendMessageParams)
   }
 }
 
-// ============================================================
-// MESSAGE TEMPLATES
-// ============================================================
+/**
+ * Sends a message and logs it in whatsapp_notifications.
+ * Fire-and-forget friendly: never throws.
+ */
+export async function sendAndLogWhatsApp(params: SendMessageParams & { personId?: string; messageType?: string }): Promise<boolean> {
+  const { churchId, phone, message, personId, messageType } = params
+  const admin = createAdminClient()
 
-export function msgBoasVindasDecisao(personName: string, churchName: string): string {
-  return `Olá, ${personName}! 🙏
+  const { data: notification } = await admin.from('whatsapp_notifications').insert({
+    church_id: churchId,
+    person_id: personId || null,
+    phone,
+    message_type: messageType || 'comunicado_geral',
+    message,
+    status: 'pending',
+  }).select('id').single()
 
-Que alegria receber você hoje em ${churchName}!
+  const sent = await sendWhatsAppMessage({ churchId, phone, message })
 
-A decisão que você tomou hoje é o início de uma jornada incrível. Nos próximos dias, alguém da nossa equipe entrará em contato para te apresentar os próximos passos.
+  if (notification) {
+    await admin.from('whatsapp_notifications').update({
+      status: sent ? 'sent' : 'failed',
+      sent_at: sent ? new Date().toISOString() : null,
+    }).eq('id', notification.id)
+  }
 
-Fique à vontade para entrar em contato conosco se tiver alguma dúvida. Estamos aqui para cuidar de você! 💜`
-}
-
-export function msgBoasVindasNovosMembros(personName: string, className: string, dayOfWeek: string, time: string): string {
-  return `Olá, ${personName}! 📚
-
-Sua matrícula na turma *${className}* foi confirmada!
-
-📅 Dia: ${dayOfWeek}
-⏰ Horário: ${time}
-
-Nos Novos Membros você vai conhecer mais sobre nossa igreja, nossa fé e como se integrar à família. Te esperamos!
-
-Qualquer dúvida, é só chamar. 💜`
-}
-
-export function msgConclusaoNovosMembros(personName: string, churchName: string): string {
-  return `Parabéns, ${personName}! 🎓✨
-
-Você concluiu o curso de *Novos Membros* da ${churchName}!
-
-Este é um grande passo na sua jornada espiritual. O próximo passo é entrar para um Discipulado/Célula, onde você vai crescer ainda mais na fé em comunidade.
-
-Em breve alguém da nossa equipe vai te apresentar um grupo! 💜`
-}
-
-export function msgAlertaAcompanhamento(personName: string, leaderName: string): string {
-  return `Olá, ${personName}! 💜
-
-${leaderName}, seu líder de discipulado, registrou que você está em um momento que precisa de atenção especial.
-
-Queremos que saiba que você não está sozinho(a). Estamos aqui para cuidar de você.
-
-Se quiser conversar, é só chamar no WhatsApp ou aparecer na nossa igleja. 🙏`
-}
-
-export function msgLiberadoServir(personName: string, churchName: string): string {
-  return `Boa notícia, ${personName}! ⭐
-
-Você foi liberado(a) para servir na ${churchName}!
-
-Você demonstrou maturidade espiritual e comprometimento com sua jornada de fé. Estamos entusiasmados para vê-lo(a) servindo!
-
-Em breve nossa equipe vai entrar em contato para apresentar as oportunidades de voluntariado disponíveis. 💜`
+  return sent
 }

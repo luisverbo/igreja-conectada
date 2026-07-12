@@ -72,6 +72,12 @@ export function EnrollmentDialog({ classId, churchId, userId }: Props) {
         event_type: 'entrou_novos_membros',
         recorded_by: userId,
       })
+      // Enrollment confirmation via WhatsApp — fire-and-forget
+      fetch('/api/whatsapp/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'boas_vindas_novos_membros', personId: p.id, classId }),
+      }).catch(() => {})
     }
 
     setLoading(false)

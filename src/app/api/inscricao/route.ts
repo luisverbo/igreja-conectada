@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendAndLogWhatsApp } from '@/lib/whatsapp'
+import { msgBoasVindasNovosMembros, DAY_LABELS } from '@/lib/whatsapp-templates'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -115,6 +117,26 @@ export async function POST(req: NextRequest) {
     event_type: 'entrou_novos_membros',
     recorded_by: null,
   })
+
+  // Enrollment confirmation via WhatsApp — must not block the response
+  const { data: turmaInfo } = await supabase
+    .from('new_members_classes')
+    .select('name, day_of_week, time_start')
+    .eq('id', classId)
+    .single()
+
+  sendAndLogWhatsApp({
+    churchId,
+    phone: phone.trim(),
+    message: msgBoasVindasNovosMembros(
+      full_name.trim(),
+      turmaInfo?.name || 'Novos Membros',
+      turmaInfo?.day_of_week ? DAY_LABELS[turmaInfo.day_of_week] || turmaInfo.day_of_week : undefined,
+      turmaInfo?.time_start?.slice(0, 5),
+    ),
+    personId,
+    messageType: 'boas_vindas_novos_membros',
+  }).catch(() => {})
 
   return NextResponse.json({ ok: true })
 }

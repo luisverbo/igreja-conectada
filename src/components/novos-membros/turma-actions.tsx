@@ -49,6 +49,12 @@ export function CompleteClassButton({ turmaId, turmaStatus, canManage }: Props) 
           event_type: 'concluiu_novos_membros',
           recorded_by: null,
         })
+        // Congratulations via WhatsApp — fire-and-forget
+        fetch('/api/whatsapp/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'conclusao_novos_membros', personId: e.person_id }),
+        }).catch(() => {})
       }
     }
 
@@ -148,6 +154,11 @@ export function MarkStudentCompleteButton({ enrollmentId, personId, completed }:
     if (now) {
       await supabase.from('people').update({ status: 'concluiu_novos_membros' }).eq('id', personId)
       await supabase.from('journey_events').insert({ person_id: personId, event_type: 'concluiu_novos_membros' })
+      fetch('/api/whatsapp/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'conclusao_novos_membros', personId }),
+      }).catch(() => {})
     } else {
       await supabase.from('people').update({ status: 'em_novos_membros' }).eq('id', personId)
     }

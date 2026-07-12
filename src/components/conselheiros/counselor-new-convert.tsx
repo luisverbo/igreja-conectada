@@ -165,6 +165,13 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
           first_time: true,
         })
       }
+
+      // Welcome message — fire-and-forget, must not block the form
+      fetch('/api/whatsapp/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'boas_vindas_decisao', personId: person.id }),
+      }).catch(() => {})
     }
 
     setSuccess(form.full_name.trim())

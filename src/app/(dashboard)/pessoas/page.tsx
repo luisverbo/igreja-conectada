@@ -30,7 +30,9 @@ const statusVariant: Record<PersonStatus, 'default' | 'secondary' | 'success' | 
   inativo: 'outline',
 }
 
-export default async function PessoasPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
+const PAGE_SIZE = 50
+
+export default async function PessoasPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; page?: string }> }) {
   const params = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -39,9 +41,11 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
   const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role').eq('id', user.id).single()
   if (!profile?.church_id) return null
 
+  const page = Math.max(1, parseInt(params.page || '1') || 1)
+
   let query = supabase
     .from('people')
-    .select('*, counselor:profiles!people_created_by_fkey(full_name, role)')
+    .select('*, counselor:profiles!people_created_by_fkey(full_name, role)', { count: 'exact' })
     .eq('church_id', profile.church_id)
     .order('full_name')
 
@@ -52,7 +56,17 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
     query = query.ilike('full_name', `%${params.q}%`)
   }
 
-  const { data: people } = await query.limit(100)
+  const { data: people, count } = await query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+
+  const totalPages = Math.max(1, Math.ceil((count || 0) / PAGE_SIZE))
+  const buildUrl = (p: number) => {
+    const qs = new URLSearchParams()
+    if (params.status) qs.set('status', params.status)
+    if (params.q) qs.set('q', params.q)
+    if (p > 1) qs.set('page', String(p))
+    const s = qs.toString()
+    return s ? `/pessoas?${s}` : '/pessoas'
+  }
 
   const statusFilters = [
     { label: 'Todos', value: '' },
@@ -190,7 +204,25 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
           </CardContent>
         </Card>
 
-        <p className="text-sm text-slate-400">{people?.length || 0} pessoas encontradas</p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-400">
+            {count || 0} pessoa(s) · página {page} de {totalPages}
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              {page > 1 && (
+                <Link href={buildUrl(page - 1)}>
+                  <Button variant="outline" size="sm">← Anterior</Button>
+                </Link>
+              )}
+              {page < totalPages && (
+                <Link href={buildUrl(page + 1)}>
+                  <Button variant="outline" size="sm">Próxima →</Button>
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

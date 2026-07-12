@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendAndLogWhatsApp } from '@/lib/whatsapp'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -11,27 +11,15 @@ export async function POST(req: NextRequest) {
   if (!phone || !message) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const { data: profile } = await supabase.from('profiles').select('church_id').eq('id', user.id).single()
+  if (!profile?.church_id) return NextResponse.json({ error: 'Sem igreja.' }, { status: 403 })
 
-  // Log the notification
-  const { data: notification } = await supabase.from('whatsapp_notifications').insert({
-    church_id: profile?.church_id,
-    person_id: person_id || null,
+  const sent = await sendAndLogWhatsApp({
+    churchId: profile.church_id,
     phone,
-    message_type: message_type || 'comunicado_geral',
     message,
-    status: 'pending',
-  }).select().single()
-
-  // Send via Evolution API
-  const sent = await sendWhatsAppMessage({ phone, message })
-
-  // Update status
-  if (notification) {
-    await supabase.from('whatsapp_notifications').update({
-      status: sent ? 'sent' : 'failed',
-      sent_at: sent ? new Date().toISOString() : null,
-    }).eq('id', notification.id)
-  }
+    personId: person_id || undefined,
+    messageType: message_type || 'comunicado_geral',
+  })
 
   return NextResponse.json({ success: sent })
 }

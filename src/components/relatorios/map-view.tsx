@@ -93,11 +93,28 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
   const novoPeople = people.filter(p => p.status === 'novo')
   const membrosPeople = people.filter(p => p.status !== 'novo')
 
+  // "Todos" merges novos + membros bubbles, summing counts per neighborhood
+  const todosGroups = (() => {
+    const merged = new Map<string, (typeof novosGroups)[number]>()
+    for (const g of [...novosGroups, ...membrosGroups]) {
+      const key = `${g.neighborhood}|${g.city}`
+      const existing = merged.get(key)
+      if (existing) {
+        merged.set(key, { ...existing, count: existing.count + g.count })
+      } else {
+        merged.set(key, { ...g })
+      }
+    }
+    return Array.from(merged.values())
+  })()
+
   const activeGroups = activeTab === 'novos' ? novosGroups
-    : activeTab === 'membros' || activeTab === 'todos' ? membrosGroups
+    : activeTab === 'membros' ? membrosGroups
+    : activeTab === 'todos' ? todosGroups
     : []
   const activePeople = activeTab === 'novos' ? novoPeople
-    : activeTab === 'membros' || activeTab === 'todos' ? membrosPeople
+    : activeTab === 'membros' ? membrosPeople
+    : activeTab === 'todos' ? people
     : []
   const showCells = activeTab === 'celulas' || activeTab === 'todos'
 

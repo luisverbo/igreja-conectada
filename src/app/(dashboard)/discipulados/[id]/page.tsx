@@ -10,6 +10,7 @@ import { DISCIPLESHIP_STATUS_LABELS, type DiscipleshipMemberStatus } from '@/lib
 import { AddMemberDialog } from '@/components/discipulados/add-member-dialog'
 import { ObservationDialog } from '@/components/discipulados/observation-dialog'
 import { EditDiscipleshipDialog } from '@/components/discipulados/edit-discipleship-dialog'
+import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
   ativo: 'success',
@@ -197,6 +198,13 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                               Perfil
                             </Button>
                           </Link>
+                          {profile && (
+                            <RemoveMemberButton
+                              memberId={member.id}
+                              personId={member.people?.id}
+                              personName={member.people?.full_name}
+                            />
+                          )}
                         </div>
                       </div>
                     </CardContent>

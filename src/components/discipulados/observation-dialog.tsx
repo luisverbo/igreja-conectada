@@ -59,6 +59,12 @@ export function ObservationDialog({ memberId, discipleshipId, personId, personNa
           description: description || 'Liberado para servir pelo líder de discipulado',
           recorded_by: userId,
         })
+        // Good news via WhatsApp — fire-and-forget
+        fetch('/api/whatsapp/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'liberado_servir', personId }),
+        }).catch(() => {})
       } else if (newStatus === 'em_acompanhamento') {
         await supabase.from('journey_events').insert({
           person_id: personId,
