@@ -34,7 +34,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
     { data: members },
   ] = await Promise.all([
     supabase.from('discipleships')
-      .select('*, leader:profiles!discipleships_leader_id_fkey(full_name, phone), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name, host_phone, address, neighborhood, city)')
+      .select('*, leader:profiles!discipleships_leader_id_fkey(full_name, phone), leader2:profiles!discipleships_leader2_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name, host_phone, address, neighborhood, city)')
       .eq('id', id)
       .single(),
     supabase.from('discipleship_members')
@@ -75,7 +75,16 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
               {discipleship.name}
             </h1>
             <div className="flex flex-wrap gap-3 mt-1 text-sm text-slate-500">
-              {discipleship.leader?.full_name && <span>Líder: <strong>{discipleship.leader.full_name}</strong></span>}
+              {discipleship.leader?.full_name && (
+                <span>
+                  {(discipleship.leader2?.full_name || discipleship.leader2_name) ? 'Líderes: ' : 'Líder: '}
+                  <strong>
+                    {discipleship.leader.full_name}
+                    {(discipleship.leader2?.full_name || discipleship.leader2_name) && ` & ${discipleship.leader2?.full_name || discipleship.leader2_name}`}
+                  </strong>
+                  {(discipleship.leader2?.full_name || discipleship.leader2_name) && ' 👫'}
+                </span>
+              )}
               {discipleship.supervisor?.full_name && <span>· Supervisor: {discipleship.supervisor.full_name}</span>}
               {discipleship.day_of_week && (
                 <span>· {dayLabels[discipleship.day_of_week]} {discipleship.time_start?.slice(0, 5)}</span>

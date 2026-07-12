@@ -16,6 +16,8 @@ interface Discipleship {
   church_id: string
   name: string
   leader_id: string | null
+  leader2_id?: string | null
+  leader2_name?: string | null
   supervisor_id: string | null
   location_id?: string | null
   address: string | null
@@ -42,6 +44,9 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
   const [form, setForm] = useState({
     name: discipleship.name,
     leader_id: discipleship.leader_id || '',
+    leader2_mode: (discipleship.leader2_id ? 'system' : discipleship.leader2_name ? 'name' : 'none') as 'none' | 'system' | 'name',
+    leader2_id: discipleship.leader2_id || '',
+    leader2_name: discipleship.leader2_name || '',
     supervisor_id: discipleship.supervisor_id || '',
     location_id: discipleship.location_id || '',
     address: discipleship.address || '',
@@ -124,6 +129,8 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
       .update({
         name: form.name.trim(),
         leader_id: form.leader_id || null,
+        leader2_id: form.leader2_mode === 'system' ? form.leader2_id || null : null,
+        leader2_name: form.leader2_mode === 'name' ? form.leader2_name.trim() || null : null,
         supervisor_id: form.supervisor_id || null,
         location_id: form.location_id || null,
         address: form.address.trim() || null,
@@ -167,19 +174,39 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
               <Label>Nome do Discipulado *</Label>
               <Input value={form.name} onChange={e => set('name', e.target.value)} required />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Líder</Label>
-                <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione">
-                  {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+            <div className="space-y-2">
+              <Label>Líder 1 <span className="text-slate-400 font-normal text-xs">(tem acesso ao sistema)</span></Label>
+              <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione">
+                {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Líder 2 — cônjuge <span className="text-slate-400 font-normal text-xs">(opcional)</span></Label>
+              <Select value={form.leader2_mode} onChange={e => set('leader2_mode', e.target.value)}>
+                <option value="none">Sem segundo líder</option>
+                <option value="name">Cônjuge sem acesso ao sistema (só o nome)</option>
+                <option value="system">Cônjuge com acesso ao sistema</option>
+              </Select>
+              {form.leader2_mode === 'system' && (
+                <Select value={form.leader2_id} onChange={e => set('leader2_id', e.target.value)} placeholder="Selecione o cônjuge">
+                  {leaders.filter(l => l.id !== form.leader_id).map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Supervisor</Label>
-                <Select value={form.supervisor_id} onChange={e => set('supervisor_id', e.target.value)} placeholder="Selecione">
-                  {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
-                </Select>
-              </div>
+              )}
+              {form.leader2_mode === 'name' && (
+                <Input
+                  value={form.leader2_name}
+                  onChange={e => set('leader2_name', e.target.value)}
+                  placeholder="Nome do cônjuge — ex: Maria Silva"
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Supervisor</Label>
+              <Select value={form.supervisor_id} onChange={e => set('supervisor_id', e.target.value)} placeholder="Selecione">
+                {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Local</Label>
