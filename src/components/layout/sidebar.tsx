@@ -11,13 +11,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const allNavItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'new_members_teacher', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
-  { label: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'viewer'] },
-  { label: 'Conselheiros', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator'] },
-  { label: 'Novos Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'new_members_teacher', 'viewer'] },
-  { label: 'Discipulados', href: '/discipulados', icon: Home, description: 'Acompanhamento pastoral', roles: ['super_admin', 'pastor', 'coordinator', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
-  { label: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'viewer'] },
-  { label: 'Configurações', href: '/configuracoes', icon: Settings, roles: ['super_admin', 'pastor', 'coordinator'] },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
+  { label: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
+  { label: 'Conselheiros', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'] },
+  { label: 'Novos Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'viewer'] },
+  { label: 'Discipulados', href: '/discipulados', icon: Home, description: 'Acompanhamento pastoral', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
+  { label: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
+  { label: 'Configurações', href: '/configuracoes', icon: Settings, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor'] },
 ]
 
 interface SidebarProps {

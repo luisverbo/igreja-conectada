@@ -11,6 +11,8 @@ import { NewClassDialog } from '@/components/novos-membros/new-class-dialog'
 import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
 import { ChurchQrCard } from '@/components/novos-membros/church-qr-card'
 import { Clock } from 'lucide-react'
+import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
+import { FULL_ACCESS } from '@/lib/roles'
 
 export default async function NovosMembrosPage() {
   const supabase = await createClient()
@@ -123,10 +125,25 @@ export default async function NovosMembrosPage() {
           </div>
         </div>
 
+        {/* Equipe do departamento */}
+        {[...FULL_ACCESS, 'new_members_leader'].includes(profile.role) && (
+          <DepartmentTeamCard
+            churchId={profile.church_id}
+            currentUserId={profile.id}
+            title="Equipe de Novos Membros"
+            description="Pessoas que trabalham no departamento. Professores têm acesso total às turmas; auxiliares só dão presença."
+            deptRoles={['new_members_leader', 'new_members_teacher', 'new_members_helper']}
+            assignRoles={['new_members_teacher', 'new_members_helper']}
+            canEdit={[...FULL_ACCESS, 'new_members_leader'].includes(profile.role)}
+          />
+        )}
+
         {/* Actions */}
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900">Turmas</h2>
-          <NewClassDialog churchId={profile.church_id} userId={profile.id} />
+          {[...FULL_ACCESS, 'new_members_leader', 'new_members_teacher'].includes(profile.role) && (
+            <NewClassDialog churchId={profile.church_id} userId={profile.id} />
+          )}
         </div>
 
         {/* Classes table */}

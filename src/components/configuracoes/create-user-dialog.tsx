@@ -9,17 +9,22 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select } from '@/components/ui/select'
 
-const roles = [
-  { value: 'pastor', label: 'Pastor' },
-  { value: 'coordinator', label: 'Coordenador' },
-  { value: 'counselor', label: 'Conselheiro' },
-  { value: 'new_members_teacher', label: 'Professor Novos Membros' },
-  { value: 'discipleship_supervisor', label: 'Supervisor de Discipulado' },
-  { value: 'discipleship_leader', label: 'Líder de Discipulado' },
-  { value: 'viewer', label: 'Visualizador' },
+import { ROLE_LABELS } from '@/lib/roles'
+
+const allRoles = [
+  'pastor', 'coordinator', 'supervisor',
+  'counselor', 'counselor_leader',
+  'new_members_leader', 'new_members_teacher', 'new_members_helper',
+  'discipleship_supervisor', 'discipleship_leader', 'viewer',
 ]
 
-export function CreateUserDialog() {
+interface CreateUserDialogProps {
+  allowedRoles?: string[]
+  buttonLabel?: string
+}
+
+export function CreateUserDialog({ allowedRoles, buttonLabel = 'Novo Usuário' }: CreateUserDialogProps) {
+  const roles = (allowedRoles || allRoles).map(r => ({ value: r, label: ROLE_LABELS[r] || r }))
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -59,7 +64,7 @@ export function CreateUserDialog() {
     <>
       <Button onClick={() => setOpen(true)} size="sm" className="gap-2">
         <UserPlus className="h-4 w-4" />
-        Novo Usuário
+        {buttonLabel}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

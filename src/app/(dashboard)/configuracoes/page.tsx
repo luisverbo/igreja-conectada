@@ -3,30 +3,28 @@ import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Settings, Users, Church, MessageSquare } from 'lucide-react'
+import { Settings, Users, Church, MessageSquare, Clock, UserCheck } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { CreateUserDialog } from '@/components/configuracoes/create-user-dialog'
 import { EditUserDialog } from '@/components/configuracoes/edit-user-dialog'
 import { EditChurchDialog } from '@/components/configuracoes/edit-church-dialog'
 import { WhatsAppSection } from '@/components/configuracoes/whatsapp-section'
+import { FollowupRulesSection } from '@/components/configuracoes/followup-rules-section'
+import { CareRulesSection } from '@/components/configuracoes/care-rules-section'
+import { ROLE_LABELS } from '@/lib/roles'
 
-const roleLabels: Record<string, string> = {
-  super_admin: 'Super Admin',
-  pastor: 'Pastor',
-  coordinator: 'Coordenador',
-  counselor: 'Conselheiro',
-  new_members_teacher: 'Professor NM',
-  discipleship_supervisor: 'Supervisor Discipulado',
-  discipleship_leader: 'Líder Discipulado',
-  viewer: 'Visualizador',
-}
+const roleLabels = ROLE_LABELS
 
 const roleVariant: Record<string, 'default' | 'secondary' | 'success' | 'warning' | 'info'> = {
   super_admin: 'default',
   pastor: 'success',
   coordinator: 'info',
+  supervisor: 'info',
   counselor: 'secondary',
+  counselor_leader: 'warning',
   new_members_teacher: 'secondary',
+  new_members_leader: 'warning',
+  new_members_helper: 'secondary',
   discipleship_supervisor: 'warning',
   discipleship_leader: 'secondary',
   viewer: 'outline' as any,
@@ -45,7 +43,7 @@ export default async function ConfiguracoesPage() {
     supabase.from('profiles').select('*').eq('church_id', profile.church_id).order('full_name'),
   ])
 
-  const canManageUsers = ['super_admin', 'pastor', 'coordinator'].includes(profile.role)
+  const canManageUsers = ['super_admin', 'pastor', 'coordinator', 'supervisor'].includes(profile.role)
 
   return (
     <div>
@@ -159,6 +157,36 @@ export default async function ConfiguracoesPage() {
             </CardHeader>
             <CardContent>
               <WhatsAppSection />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Mensagens automáticas pós-conversão */}
+        {canManageUsers && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-violet-600" />
+                Mensagens Automáticas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FollowupRulesSection churchId={profile.church_id} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Encaminhamento de novos convertidos */}
+        {canManageUsers && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-emerald-600" />
+                Encaminhamento de Novos Convertidos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CareRulesSection churchId={profile.church_id} />
             </CardContent>
           </Card>
         )}

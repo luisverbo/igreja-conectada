@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
+import { assignableRoles } from '@/lib/roles'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerClient()
@@ -14,13 +15,20 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (!profile?.church_id) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  if (!['super_admin', 'pastor', 'coordinator'].includes(profile.role)) {
+
+  const allowed = assignableRoles(profile.role)
+  if (allowed.length === 0) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
-  const { full_name, email, password, role } = await req.json()
+  const { full_name, email, password, role, phone } = await req.json()
   if (!full_name || !email || !password || !role) {
     return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 })
+  }
+
+  // Department leaders can only create roles within their department
+  if (!allowed.includes(role)) {
+    return NextResponse.json({ error: 'Você não pode atribuir essa função.' }, { status: 403 })
   }
 
   const supabaseAdmin = createClient(
@@ -44,6 +52,7 @@ export async function POST(req: NextRequest) {
     church_id: profile.church_id,
     full_name,
     role,
+    phone: phone || null,
     is_active: true,
   })
 

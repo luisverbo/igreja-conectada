@@ -64,6 +64,69 @@ export async function sendWhatsAppMessage({ churchId, phone, message }: SendMess
   }
 }
 
+interface SendMediaParams {
+  churchId: string
+  phone: string
+  mediaType: 'audio' | 'video'
+  mediaUrl: string
+  caption?: string
+}
+
+/**
+ * Sends audio (voice note) or video via the church's default instance.
+ */
+export async function sendWhatsAppMedia({ churchId, phone, mediaType, mediaUrl, caption }: SendMediaParams): Promise<boolean> {
+  if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) return false
+
+  try {
+    const admin = createAdminClient()
+    const { data: instance } = await admin
+      .from('whatsapp_instances')
+      .select('instance_name')
+      .eq('church_id', churchId)
+      .eq('is_default', true)
+      .maybeSingle()
+
+    let instanceName = instance?.instance_name
+    if (!instanceName) {
+      const { data: anyInstance } = await admin
+        .from('whatsapp_instances')
+        .select('instance_name')
+        .eq('church_id', churchId)
+        .limit(1)
+        .maybeSingle()
+      instanceName = anyInstance?.instance_name
+    }
+    if (!instanceName) return false
+
+    const cleaned = phone.replace(/\D/g, '')
+    const number = cleaned.startsWith('55') ? cleaned : `55${cleaned}`
+
+    if (mediaType === 'audio') {
+      const res = await fetch(`${EVOLUTION_API_URL}/message/sendWhatsAppAudio/${instanceName}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+        body: JSON.stringify({ number: `${number}@s.whatsapp.net`, audio: mediaUrl }),
+      })
+      return res.ok
+    }
+
+    const res = await fetch(`${EVOLUTION_API_URL}/message/sendMedia/${instanceName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+      body: JSON.stringify({
+        number: `${number}@s.whatsapp.net`,
+        mediatype: 'video',
+        media: mediaUrl,
+        caption: caption || '',
+      }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 /**
  * Sends a message and logs it in whatsapp_notifications.
  * Fire-and-forget friendly: never throws.

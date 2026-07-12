@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.church_id || !['super_admin', 'pastor', 'coordinator', 'new_members_teacher'].includes(profile.role)) {
+  if (!profile?.church_id || !['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher'].includes(profile.role)) {
     return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 })
   }
 

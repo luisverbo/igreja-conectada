@@ -92,7 +92,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
             <Badge variant={discipleship.status === 'ativo' ? 'success' : 'outline'}>
               {discipleship.status === 'ativo' ? 'Ativo' : 'Inativo'}
             </Badge>
-            {profile && ['super_admin', 'pastor', 'coordinator', 'discipleship_supervisor'].includes(profile.role) && (
+            {profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor'].includes(profile.role) && (
               <EditDiscipleshipDialog discipleship={discipleship} />
             )}
             {profile && <AddMemberDialog discipleshipId={id} churchId={profile.church_id} userId={profile.id} userRole={profile.role} />}

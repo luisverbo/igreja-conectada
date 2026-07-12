@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-const ALLOWED_ROLES = [
-  'pastor', 'coordinator', 'counselor', 'new_members_teacher',
-  'discipleship_supervisor', 'discipleship_leader', 'viewer',
-]
+import { assignableRoles } from '@/lib/roles'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -20,7 +16,8 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (!caller?.church_id || !['super_admin', 'pastor', 'coordinator'].includes(caller.role)) {
+  const callerAllowed = caller ? assignableRoles(caller.role) : []
+  if (!caller?.church_id || callerAllowed.length === 0) {
     return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 })
   }
 
@@ -33,8 +30,8 @@ export async function POST(req: NextRequest) {
   if (userId === user.id) {
     return NextResponse.json({ error: 'Você não pode editar sua própria conta por aqui.' }, { status: 400 })
   }
-  if (role !== undefined && !ALLOWED_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Função inválida.' }, { status: 400 })
+  if (role !== undefined && !callerAllowed.includes(role)) {
+    return NextResponse.json({ error: 'Você não pode atribuir essa função.' }, { status: 403 })
   }
 
   const admin = createAdminClient()
@@ -51,6 +48,10 @@ export async function POST(req: NextRequest) {
   }
   if (target.role === 'super_admin') {
     return NextResponse.json({ error: 'Este usuário não pode ser alterado.' }, { status: 403 })
+  }
+  // Department leaders can only manage users within their own department
+  if (!callerAllowed.includes(target.role)) {
+    return NextResponse.json({ error: 'Você não pode editar este usuário.' }, { status: 403 })
   }
 
   const updates: Record<string, unknown> = {}

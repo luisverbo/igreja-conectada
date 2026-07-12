@@ -58,7 +58,7 @@ export default async function AppealPage({ params }: { params: Promise<{ id: str
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="info">{appeal.total_decisions} decisão(ões)</Badge>
-            {profile && ['super_admin', 'pastor', 'coordinator'].includes(profile.role) && (
+            {profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'].includes(profile.role) && (
               <>
                 <EditAppealDialog appeal={appeal} />
                 <DeleteAppealButton appealId={id} totalDecisions={appeal.total_decisions} />
@@ -119,7 +119,7 @@ export default async function AppealPage({ params }: { params: Promise<{ id: str
                       <TableCell className="text-sm text-slate-600">{d.profiles?.full_name || '—'}</TableCell>
                       <TableCell className="text-sm text-slate-600 max-w-xs truncate">{d.notes || '—'}</TableCell>
                       <TableCell>
-                        {profile && ['super_admin', 'pastor', 'coordinator'].includes(profile.role) && (
+                        {profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'].includes(profile.role) && (
                           <DeleteDecisionButton decisionId={d.id} />
                         )}
                       </TableCell>

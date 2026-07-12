@@ -82,6 +82,15 @@ export function NewDecisionDialog({ appealId, churchId, userId }: Props) {
       notes: form.notes || null,
     })
 
+    // Follow-up automations + care routing for conversions
+    if (form.decision_type === 'aceitou_jesus') {
+      fetch('/api/followups/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personId }),
+      }).catch(() => {})
+    }
+
     setLoading(false)
     setOpen(false)
     router.refresh()

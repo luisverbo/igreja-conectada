@@ -12,16 +12,7 @@ interface HeaderProps {
   userRole?: string
 }
 
-const roleLabels: Record<string, string> = {
-  super_admin: 'Super Admin',
-  pastor: 'Pastor',
-  coordinator: 'Coordenador',
-  counselor: 'Conselheiro',
-  new_members_teacher: 'Professor NM',
-  discipleship_supervisor: 'Supervisor Discipulado',
-  discipleship_leader: 'Líder Discipulado',
-  viewer: 'Visualizador',
-}
+import { ROLE_LABELS as roleLabels } from '@/lib/roles'
 
 export function Header({ title, description, userName = 'Usuário', userRole }: HeaderProps) {
   const router = useRouter()

@@ -64,7 +64,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     quarta: 'Quarta-feira', quinta: 'Quinta-feira', sexta: 'Sexta-feira', sabado: 'Sábado',
   }
 
-  const canManage = !!profile && ['super_admin', 'pastor', 'coordinator', 'new_members_teacher'].includes(profile.role)
+  const canManage = !!profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher'].includes(profile.role)
   const teacherName = turma.teacher?.full_name
 
   return (
@@ -124,7 +124,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             {turma.registration_token && turma.status === 'ativa' && turma.enrollment_open && (
               <CopyLinkButton token={turma.registration_token} />
             )}
-            {profile && turma.status === 'ativa' && (
+            {profile && canManage && turma.status === 'ativa' && (
               <EnrollmentDialog classId={id} churchId={profile.church_id} userId={profile.id} />
             )}
             {profile && (
@@ -134,7 +134,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                 canManage={canManage}
               />
             )}
-            {profile && ['super_admin', 'pastor', 'coordinator'].includes(profile.role) && (
+            {profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader'].includes(profile.role) && (
               <DeleteClassButton turmaId={id} turmaName={turma.name} studentCount={enrollments?.length || 0} />
             )}
           </div>

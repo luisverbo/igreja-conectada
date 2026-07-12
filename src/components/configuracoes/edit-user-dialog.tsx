@@ -12,21 +12,22 @@ interface UserRow {
   is_active: boolean
 }
 
+import { ROLE_LABELS } from '@/lib/roles'
+
 interface Props {
   user: UserRow
+  allowedRoles?: string[]
 }
 
-const ROLE_OPTIONS = [
-  { value: 'pastor', label: 'Pastor' },
-  { value: 'coordinator', label: 'Coordenador' },
-  { value: 'counselor', label: 'Conselheiro' },
-  { value: 'new_members_teacher', label: 'Professor Novos Membros' },
-  { value: 'discipleship_supervisor', label: 'Supervisor Discipulado' },
-  { value: 'discipleship_leader', label: 'Líder Discipulado' },
-  { value: 'viewer', label: 'Visualizador' },
+const ALL_ROLES = [
+  'pastor', 'coordinator', 'supervisor',
+  'counselor', 'counselor_leader',
+  'new_members_leader', 'new_members_teacher', 'new_members_helper',
+  'discipleship_supervisor', 'discipleship_leader', 'viewer',
 ]
 
-export function EditUserDialog({ user }: Props) {
+export function EditUserDialog({ user, allowedRoles }: Props) {
+  const ROLE_OPTIONS = (allowedRoles || ALL_ROLES).map(r => ({ value: r, label: ROLE_LABELS[r] || r }))
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)

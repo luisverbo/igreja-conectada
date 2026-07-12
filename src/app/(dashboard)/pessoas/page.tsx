@@ -9,16 +9,7 @@ import Link from 'next/link'
 import { formatDate, formatPhone } from '@/lib/utils'
 import { PERSON_STATUS_LABELS, type PersonStatus, type UserRole } from '@/lib/types'
 
-const roleLabels: Record<string, string> = {
-  super_admin: 'Super Admin',
-  pastor: 'Pastor',
-  coordinator: 'Coordenador',
-  counselor: 'Conselheiro',
-  new_members_teacher: 'Prof. Novos Membros',
-  discipleship_supervisor: 'Sup. Discipulado',
-  discipleship_leader: 'Líder Discipulado',
-  viewer: 'Visualizador',
-}
+import { ROLE_LABELS as roleLabels } from '@/lib/roles'
 
 const statusVariant: Record<PersonStatus, 'default' | 'secondary' | 'success' | 'warning' | 'info' | 'outline'> = {
   novo: 'secondary',

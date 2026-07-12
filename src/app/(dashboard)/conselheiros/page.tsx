@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Header } from '@/components/layout/header'
+import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -72,6 +73,19 @@ export default async function ConselheirosPage() {
             )
           })}
         </div>
+
+        {/* Equipe do departamento */}
+        {['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'].includes(profile.role) && (
+          <DepartmentTeamCard
+            churchId={profile.church_id}
+            currentUserId={user.id}
+            title="Equipe de Conselheiros"
+            description="Conselheiros cadastram novos convertidos pelo formulário mobile durante os apelos."
+            deptRoles={['counselor_leader', 'counselor']}
+            assignRoles={['counselor']}
+            canEdit={['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'].includes(profile.role)}
+          />
+        )}
 
         {/* Actions */}
         <div className="flex items-center justify-between">

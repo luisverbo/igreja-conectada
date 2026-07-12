@@ -172,6 +172,13 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'boas_vindas_decisao', personId: person.id }),
       }).catch(() => {})
+
+      // Schedule follow-up messages + care assignment routing
+      fetch('/api/followups/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personId: person.id }),
+      }).catch(() => {})
     }
 
     setSuccess(form.full_name.trim())

@@ -19,7 +19,7 @@ interface Props {
 const NM_COMPLETED = ['concluiu_novos_membros', 'em_discipulado', 'liberado_para_servir']
 
 // Roles that can authorize adding someone who hasn't completed NM
-const CAN_AUTHORIZE = ['super_admin', 'pastor', 'coordinator', 'discipleship_supervisor']
+const CAN_AUTHORIZE = ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor']
 
 const STATUS_LABELS: Record<string, string> = {
   novo: 'Novo',
