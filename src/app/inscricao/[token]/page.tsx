@@ -8,13 +8,13 @@ export default async function PublicEnrollmentPage({ params }: { params: Promise
 
   const { data: turma } = await supabase
     .from('new_members_classes')
-    .select('id, name, day_of_week, time_start, location, status, church_id')
+    .select('id, name, day_of_week, time_start, location, status, church_id, enrollment_open')
     .eq('registration_token', token)
     .single()
 
   if (!turma) notFound()
 
-  if (turma.status !== 'ativa') {
+  if (turma.status !== 'ativa' || !turma.enrollment_open) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 to-slate-100 flex flex-col items-center justify-center py-10 px-4">
         <div className="w-full max-w-md text-center">

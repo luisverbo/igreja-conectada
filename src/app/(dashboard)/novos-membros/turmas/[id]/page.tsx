@@ -12,6 +12,7 @@ import { CompleteClassButton, RemoveEnrollmentButton, MarkStudentCompleteButton 
 import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
 import { EditClassDialog } from '@/components/novos-membros/edit-class-dialog'
 import { DeleteClassButton } from '@/components/novos-membros/delete-class-button'
+import { EnrollmentToggle } from '@/components/novos-membros/enrollment-toggle'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -25,6 +26,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     { data: turma },
     { data: lessons },
     { data: enrollments },
+    { data: teachers },
   ] = await Promise.all([
     supabase.from('new_members_classes').select('*, registration_token, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)').eq('id', id).single(),
     supabase.from('new_members_lessons').select('*').eq('class_id', id).order('lesson_number'),
@@ -32,6 +34,9 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
       .select('*, people(id, full_name, phone, status)')
       .eq('class_id', id)
       .order('enrolled_at'),
+    profile?.church_id
+      ? supabase.from('profiles').select('id, full_name').eq('church_id', profile.church_id).eq('is_active', true).order('full_name')
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
   ])
 
   if (!turma) notFound()
@@ -108,8 +113,15 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-wrap">
+            {canManage && turma.status === 'ativa' && (
+              <EnrollmentToggle
+                turmaId={id}
+                enrollmentOpen={turma.enrollment_open ?? true}
+                closeAfterLesson={turma.close_after_lesson}
+              />
+            )}
             {canManage && <EditClassDialog turma={turma} />}
-            {turma.registration_token && turma.status === 'ativa' && (
+            {turma.registration_token && turma.status === 'ativa' && turma.enrollment_open && (
               <CopyLinkButton token={turma.registration_token} />
             )}
             {profile && turma.status === 'ativa' && (
@@ -162,6 +174,10 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             attendanceRecords={attendanceRecords || []}
             userId={profile?.id || ''}
             canManage={canManage}
+            teachers={teachers || []}
+            turmaId={id}
+            closeAfterLesson={turma.close_after_lesson}
+            enrollmentOpen={turma.enrollment_open ?? true}
           />
         )}
 

@@ -9,6 +9,8 @@ import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import { NewClassDialog } from '@/components/novos-membros/new-class-dialog'
 import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
+import { ChurchQrCard } from '@/components/novos-membros/church-qr-card'
+import { Clock } from 'lucide-react'
 
 export default async function NovosMembrosPage() {
   const supabase = await createClient()
@@ -18,11 +20,24 @@ export default async function NovosMembrosPage() {
   const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role, id').eq('id', user.id).single()
   if (!profile?.church_id) return null
 
-  const { data: classes } = await supabase
-    .from('new_members_classes')
-    .select('*, registration_token, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)')
-    .eq('church_id', profile.church_id)
-    .order('created_at', { ascending: false })
+  const [{ data: classes }, { data: church }, { data: waitlist }] = await Promise.all([
+    supabase
+      .from('new_members_classes')
+      .select('*, registration_token, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)')
+      .eq('church_id', profile.church_id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('churches')
+      .select('name, registration_token')
+      .eq('id', profile.church_id)
+      .single(),
+    supabase
+      .from('enrollment_waitlist')
+      .select('id, created_at, people(id, full_name, phone)')
+      .eq('church_id', profile.church_id)
+      .eq('status', 'aguardando')
+      .order('created_at'),
+  ])
 
   // Enrollments count per class
   const classIds = classes?.map(c => c.id) || []
@@ -50,11 +65,12 @@ export default async function NovosMembrosPage() {
 
       <div className="p-6 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: 'Turmas Ativas', value: activeClasses.length, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Alunos Matriculados', value: totalEnrolled, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Turmas Concluídas', value: (classes?.filter(c => c.status === 'concluida') || []).length, icon: GraduationCap, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Fila de Espera', value: waitlist?.length || 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
           ].map(s => {
             const Icon = s.icon
             return (
@@ -71,6 +87,40 @@ export default async function NovosMembrosPage() {
               </Card>
             )
           })}
+        </div>
+
+        {/* QR Code + Fila de espera */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {church?.registration_token && (
+            <ChurchQrCard token={church.registration_token} churchName={church.name} />
+          )}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="h-4 w-4 text-amber-500" />
+              <h3 className="text-sm font-bold text-slate-900">Fila de Espera</h3>
+              {(waitlist?.length || 0) > 0 && (
+                <span className="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-bold">{waitlist!.length}</span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mb-3">
+              Serão matriculados automaticamente na próxima turma com inscrições abertas.
+            </p>
+            {waitlist && waitlist.length > 0 ? (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {waitlist.map((w: any) => (
+                  <div key={w.id} className="flex items-center justify-between rounded-lg bg-amber-50/60 border border-amber-100 px-3 py-2">
+                    <Link href={`/pessoas/${w.people?.id}`} className="text-sm font-medium text-slate-800 hover:text-violet-600 truncate">
+                      {w.people?.full_name}
+                    </Link>
+                    <span className="text-xs text-slate-400 flex-shrink-0 ml-2">{formatDate(w.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400 py-4 text-center">Ninguém aguardando no momento 🎉</p>
+            )}
+          </div>
         </div>
 
         {/* Actions */}
@@ -124,13 +174,20 @@ export default async function NovosMembrosPage() {
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">{cls.total_lessons} aulas</TableCell>
                       <TableCell>
-                        <Badge variant={cls.status === 'ativa' ? 'success' : cls.status === 'concluida' ? 'info' : 'outline'}>
-                          {cls.status === 'ativa' ? 'Ativa' : cls.status === 'concluida' ? 'Concluída' : 'Cancelada'}
-                        </Badge>
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge variant={cls.status === 'ativa' ? 'success' : cls.status === 'concluida' ? 'info' : 'outline'}>
+                            {cls.status === 'ativa' ? 'Ativa' : cls.status === 'concluida' ? 'Concluída' : 'Cancelada'}
+                          </Badge>
+                          {cls.status === 'ativa' && (
+                            <span className={`text-[10px] font-semibold ${cls.enrollment_open ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {cls.enrollment_open ? '🟢 Inscrições abertas' : '🔒 Inscrições fechadas'}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {cls.registration_token && cls.status === 'ativa' && (
+                          {cls.registration_token && cls.status === 'ativa' && cls.enrollment_open && (
                             <CopyLinkButton token={cls.registration_token} />
                           )}
                           <Link href={`/novos-membros/turmas/${cls.id}`}>

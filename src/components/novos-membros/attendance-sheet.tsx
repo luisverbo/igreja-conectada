@@ -12,12 +12,19 @@ interface Props {
   attendanceRecords: any[]
   userId: string
   canManage?: boolean
+  teachers?: { id: string; full_name: string }[]
+  turmaId?: string
+  closeAfterLesson?: number | null
+  enrollmentOpen?: boolean
 }
 
 // present: true | false | undefined (not recorded yet)
 type AttState = Record<string, boolean | undefined>
 
-export function AttendanceSheet({ lessons, enrollments, attendanceRecords, userId, canManage = true }: Props) {
+export function AttendanceSheet({
+  lessons, enrollments, attendanceRecords, userId, canManage = true,
+  teachers = [], turmaId, closeAfterLesson, enrollmentOpen,
+}: Props) {
   const router = useRouter()
   const [selectedLesson, setSelectedLesson] = useState<string>(
     lessons.find(l => l.status === 'pendente')?.id || lessons[0]?.id || ''
@@ -27,6 +34,13 @@ export function AttendanceSheet({ lessons, enrollments, attendanceRecords, userI
   const [bulkSaving, setBulkSaving] = useState(false)
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [titleDraft, setTitleDraft] = useState('')
+  const [lessonTeachers, setLessonTeachers] = useState<Record<string, string>>(() => {
+    const m: Record<string, string> = {}
+    lessons.forEach(l => { if (l.teacher_id) m[l.id] = l.teacher_id })
+    return m
+  })
+
+  const teacherName = (id?: string) => teachers.find(t => t.id === id)?.full_name
 
   // attendance per lesson: { lessonId: { personId: present } }
   const [att, setAtt] = useState<Record<string, AttState>>(() => {
@@ -62,7 +76,24 @@ export function AttendanceSheet({ lessons, enrollments, attendanceRecords, userI
         .update({ status: 'realizada', lesson_date: lessonDate })
         .eq('id', lessonId)
       setLessonMeta(prev => ({ ...prev, [lessonId]: { ...prev[lessonId], status: 'realizada', lesson_date: lessonDate } }))
+
+      // Auto-close enrollment window when the configured lesson happens
+      const lesson = lessons.find(l => l.id === lessonId)
+      if (turmaId && enrollmentOpen && closeAfterLesson && lesson && lesson.lesson_number >= closeAfterLesson) {
+        await supabase.from('new_members_classes')
+          .update({ enrollment_open: false })
+          .eq('id', turmaId)
+        router.refresh()
+      }
     }
+  }
+
+  async function changeTeacher(lessonId: string, teacherId: string) {
+    setLessonTeachers(prev => ({ ...prev, [lessonId]: teacherId }))
+    const supabase = createClient()
+    await supabase.from('new_members_lessons')
+      .update({ teacher_id: teacherId || null })
+      .eq('id', lessonId)
   }
 
   async function mark(personId: string, enrollmentId: string, present: boolean) {
@@ -172,6 +203,11 @@ export function AttendanceSheet({ lessons, enrollments, attendanceRecords, userI
                   Aula {lesson.lesson_number} {done && '✓'}
                 </p>
                 <p className="text-sm font-semibold truncate max-w-[130px]">{meta?.title || `Aula ${lesson.lesson_number}`}</p>
+                {teacherName(lessonTeachers[lesson.id]) && (
+                  <p className={`text-[10px] truncate max-w-[130px] ${isActive ? 'text-violet-100' : 'text-slate-500'}`}>
+                    👤 {teacherName(lessonTeachers[lesson.id])}
+                  </p>
+                )}
                 {meta?.lesson_date && (
                   <p className={`text-[10px] ${isActive ? 'text-violet-200' : 'text-slate-400'}`}>{formatDate(meta.lesson_date)}</p>
                 )}
@@ -185,7 +221,18 @@ export function AttendanceSheet({ lessons, enrollments, attendanceRecords, userI
         <>
           {/* Lesson info bar */}
           <div className="px-4 sm:px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              {canManage && teachers.length > 0 && (
+                <select
+                  value={lessonTeachers[currentLesson.id] || ''}
+                  onChange={e => changeTeacher(currentLesson.id, e.target.value)}
+                  title="Professor desta aula"
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 max-w-[160px]"
+                >
+                  <option value="">Sem professor</option>
+                  {teachers.map(t => <option key={t.id} value={t.id}>👤 {t.full_name}</option>)}
+                </select>
+              )}
               {editingTitle === currentLesson.id ? (
                 <input
                   autoFocus

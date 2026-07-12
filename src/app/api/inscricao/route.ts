@@ -7,22 +7,47 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { classId, churchId, token, full_name, phone, email, birth_date } = body
 
-  if (!classId || !churchId || !token || !full_name?.trim() || !phone?.trim()) {
+  if (!classId || !churchId || (!token && !body.churchToken) || !full_name?.trim() || !phone?.trim()) {
     return NextResponse.json({ error: 'Dados obrigatórios ausentes.' }, { status: 400 })
   }
 
   const supabase = createAdminClient()
 
-  // Verify the token matches the class
-  const { data: turma } = await supabase
-    .from('new_members_classes')
-    .select('id, status')
-    .eq('id', classId)
-    .eq('registration_token', token)
-    .single()
+  // Token can be the class token (per-class link) or the church token (standing QR)
+  let turma: { id: string; status: string; enrollment_open: boolean } | null = null
+
+  if (token) {
+    const { data: byClassToken } = await supabase
+      .from('new_members_classes')
+      .select('id, status, enrollment_open')
+      .eq('id', classId)
+      .eq('registration_token', token)
+      .maybeSingle()
+    if (byClassToken) turma = byClassToken
+  }
+
+  if (!turma && body.churchToken) {
+    const { data: church } = await supabase
+      .from('churches')
+      .select('id')
+      .eq('registration_token', body.churchToken)
+      .single()
+    if (church) {
+      const { data: byChurch } = await supabase
+        .from('new_members_classes')
+        .select('id, status, enrollment_open')
+        .eq('id', classId)
+        .eq('church_id', church.id)
+        .maybeSingle()
+      turma = byChurch
+    }
+  }
 
   if (!turma || turma.status !== 'ativa') {
     return NextResponse.json({ error: 'Turma não encontrada ou encerrada.' }, { status: 404 })
+  }
+  if (!turma.enrollment_open) {
+    return NextResponse.json({ error: 'As inscrições desta turma já foram encerradas.' }, { status: 400 })
   }
 
   // Find existing person by phone, email, or exact name (in order of confidence)
