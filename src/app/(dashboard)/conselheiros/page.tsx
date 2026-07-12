@@ -84,13 +84,23 @@ export default async function ConselheirosPage() {
             deptRoles={['counselor_leader', 'counselor_full', 'counselor']}
             assignRoles={['counselor', 'counselor_full']}
             canEdit={['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'].includes(profile.role)}
+            moduleKey="conselheiros"
+            moduleLabel="Conselheiros"
           />
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-base font-semibold text-slate-900">Cultos Registrados</h2>
-          <NewAppealDialog churchId={profile.church_id} userId={user.id} />
+          <div className="flex items-center gap-2">
+            <Link href="/conselheiros/novo">
+              <Button size="sm" variant="outline" className="gap-1.5">
+                <Heart className="h-4 w-4 text-pink-500" />
+                Cadastrar Convertido
+              </Button>
+            </Link>
+            <NewAppealDialog churchId={profile.church_id} userId={user.id} />
+          </div>
         </div>
 
         {/* Appeals table */}

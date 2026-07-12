@@ -19,13 +19,21 @@ export default async function DiscipuladosPage() {
   const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role, id').eq('id', user.id).single()
   if (!profile?.church_id) return null
 
-  const { data: discipleships } = await supabase
+  const canManageDept = [...FULL_ACCESS, 'discipleship_supervisor'].includes(profile.role)
+  // Quem não é gestão do departamento (nem viewer) só vê os GCAs que lidera/supervisiona
+  const seesAll = [...FULL_ACCESS, 'discipleship_supervisor', 'viewer'].includes(profile.role)
+
+  let gcaQuery = supabase
     .from('discipleships')
     .select('*, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name)')
     .eq('church_id', profile.church_id)
     .order('name')
 
-  const canManageDept = [...FULL_ACCESS, 'discipleship_supervisor'].includes(profile.role)
+  if (!seesAll) {
+    gcaQuery = gcaQuery.or(`leader_id.eq.${profile.id},leader2_id.eq.${profile.id},supervisor_id.eq.${profile.id}`)
+  }
+
+  const { data: discipleships } = await gcaQuery
 
   // Member counts
   const ids = discipleships?.map(d => d.id) || []
@@ -103,6 +111,8 @@ export default async function DiscipuladosPage() {
               deptRoles={['discipleship_supervisor', 'discipleship_leader']}
               assignRoles={FULL_ACCESS.includes(profile.role) ? ['discipleship_supervisor', 'discipleship_leader'] : ['discipleship_leader']}
               canEdit={canManageDept}
+              moduleKey="discipulados"
+              moduleLabel="GCA"
             />
           </div>
         )}

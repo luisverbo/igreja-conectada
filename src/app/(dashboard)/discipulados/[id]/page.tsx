@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { FULL_ACCESS } from '@/lib/roles'
 import Link from 'next/link'
 import { ArrowLeft, Home, MapPin, Users, AlertCircle, Star, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,13 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
   ])
 
   if (!discipleship) notFound()
+
+  // Quem não é gestão do departamento só acessa GCAs que lidera/supervisiona
+  const seesAll = !!profile && [...FULL_ACCESS, 'discipleship_supervisor', 'viewer'].includes(profile.role)
+  const isMine = !!profile && [discipleship.leader_id, discipleship.leader2_id, discipleship.supervisor_id].includes(profile.id)
+  if (!seesAll && !isMine) {
+    redirect('/discipulados')
+  }
 
   const activeMembers = members?.filter(m => m.status !== 'inativo') || []
   const needCare = members?.filter(m => m.status === 'em_acompanhamento' || m.status === 'situacao_sensivel') || []

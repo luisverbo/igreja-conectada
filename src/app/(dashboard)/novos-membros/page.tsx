@@ -135,6 +135,8 @@ export default async function NovosMembrosPage() {
             deptRoles={['new_members_leader', 'new_members_teacher', 'new_members_helper']}
             assignRoles={['new_members_teacher', 'new_members_helper']}
             canEdit={[...FULL_ACCESS, 'new_members_leader'].includes(profile.role)}
+            moduleKey="novos-membros"
+            moduleLabel="Novos Membros"
           />
         )}
 
