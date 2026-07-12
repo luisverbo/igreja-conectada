@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate, formatPhone } from '@/lib/utils'
 import { NewDecisionDialog } from '@/components/conselheiros/new-decision-dialog'
+import { EditAppealDialog, DeleteAppealButton, DeleteDecisionButton } from '@/components/conselheiros/appeal-actions'
 
 export default async function AppealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -57,6 +58,12 @@ export default async function AppealPage({ params }: { params: Promise<{ id: str
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="info">{appeal.total_decisions} decisão(ões)</Badge>
+            {profile && ['super_admin', 'pastor', 'coordinator'].includes(profile.role) && (
+              <>
+                <EditAppealDialog appeal={appeal} />
+                <DeleteAppealButton appealId={id} totalDecisions={appeal.total_decisions} />
+              </>
+            )}
             {profile && <NewDecisionDialog appealId={id} churchId={profile.church_id} userId={profile.id} />}
           </div>
         </div>
@@ -80,6 +87,7 @@ export default async function AppealPage({ params }: { params: Promise<{ id: str
                   <TableHead>1ª vez</TableHead>
                   <TableHead>Conselheiro</TableHead>
                   <TableHead>Observações</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -110,11 +118,16 @@ export default async function AppealPage({ params }: { params: Promise<{ id: str
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">{d.profiles?.full_name || '—'}</TableCell>
                       <TableCell className="text-sm text-slate-600 max-w-xs truncate">{d.notes || '—'}</TableCell>
+                      <TableCell>
+                        {profile && ['super_admin', 'pastor', 'coordinator'].includes(profile.role) && (
+                          <DeleteDecisionButton decisionId={d.id} />
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-12 text-slate-400">
                       <UserPlus className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p>Nenhuma decisão registrada</p>
                       <p className="text-xs mt-1">Clique em &ldquo;Registrar Decisão&rdquo; para adicionar</p>

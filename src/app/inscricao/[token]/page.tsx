@@ -12,7 +12,25 @@ export default async function PublicEnrollmentPage({ params }: { params: Promise
     .eq('registration_token', token)
     .single()
 
-  if (!turma || turma.status !== 'ativa') notFound()
+  if (!turma) notFound()
+
+  if (turma.status !== 'ativa') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-slate-100 flex flex-col items-center justify-center py-10 px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-200 mb-4">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Inscrições encerradas</h1>
+          <p className="text-slate-500">
+            As inscrições para a turma <strong>{turma.name}</strong> já foram encerradas.
+            Fique de olho — em breve teremos novas turmas!
+          </p>
+          <p className="text-center text-xs text-slate-400 mt-10">Igreja Conectada · Sistema de Gestão</p>
+        </div>
+      </div>
+    )
+  }
 
   const { data: church } = await supabase
     .from('churches')

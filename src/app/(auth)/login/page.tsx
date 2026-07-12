@@ -15,6 +15,26 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resetMode, setResetMode] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+
+  async function handleResetRequest(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/redefinir-senha`,
+    })
+
+    setLoading(false)
+    if (error) {
+      setError('Não foi possível enviar o e-mail. Verifique o endereço e tente novamente.')
+      return
+    }
+    setResetSent(true)
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -93,61 +113,129 @@ export default function LoginPage() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-slate-900">Entrar</h1>
-              <p className="text-slate-500 mt-1">Acesse o sistema de gestão da sua igreja</p>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  required
-                  autoComplete="email"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+            {resetMode ? (
+              <>
+                <div className="mb-8">
+                  <h1 className="text-2xl font-bold text-slate-900">Recuperar senha</h1>
+                  <p className="text-slate-500 mt-1">Enviaremos um link de redefinição para o seu e-mail</p>
                 </div>
-              </div>
 
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  {error}
+                {resetSent ? (
+                  <div className="space-y-5">
+                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+                      E-mail enviado! Verifique sua caixa de entrada (e o spam) e clique no link para criar uma nova senha.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setResetMode(false); setResetSent(false); setError(null) }}
+                      className="w-full text-sm font-medium text-violet-600 hover:text-violet-700"
+                    >
+                      ← Voltar para o login
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleResetRequest} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">E-mail</Label>
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        required
+                        autoComplete="email"
+                      />
+                    </div>
+
+                    {error && (
+                      <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                        {error}
+                      </div>
+                    )}
+
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? 'Enviando...' : 'Enviar link de recuperação'}
+                    </Button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setResetMode(false); setError(null) }}
+                      className="w-full text-sm font-medium text-slate-500 hover:text-slate-700"
+                    >
+                      ← Voltar para o login
+                    </button>
+                  </form>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="mb-8">
+                  <h1 className="text-2xl font-bold text-slate-900">Entrar</h1>
+                  <p className="text-slate-500 mt-1">Acesse o sistema de gestão da sua igreja</p>
                 </div>
-              )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Entrando...' : 'Entrar'}
-              </Button>
-            </form>
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="seu@email.com"
+                      required
+                      autoComplete="email"
+                    />
+                  </div>
 
-            <p className="text-center text-xs text-slate-400 mt-6">
-              Problemas para acessar? Fale com o administrador da sua igreja.
-            </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Senha</Label>
+                      <button
+                        type="button"
+                        onClick={() => { setResetMode(true); setError(null) }}
+                        className="text-xs font-medium text-violet-600 hover:text-violet-700"
+                      >
+                        Esqueci minha senha
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                      {error}
+                    </div>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Entrando...' : 'Entrar'}
+                  </Button>
+                </form>
+
+                <p className="text-center text-xs text-slate-400 mt-6">
+                  Problemas para acessar? Fale com o administrador da sua igreja.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -30,6 +30,7 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute = isAuthRoute
     || pathname.startsWith('/setup')
     || pathname.startsWith('/inscricao')
+    || pathname.startsWith('/redefinir-senha')
     || pathname === '/'
 
   if (!user && !isPublicRoute) {
