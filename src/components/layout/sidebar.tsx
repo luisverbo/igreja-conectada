@@ -15,7 +15,7 @@ const allNavItems = [
   { label: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
   { label: 'Conselheiros', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader'] },
   { label: 'Novos Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'viewer'] },
-  { label: 'Discipulados', href: '/discipulados', icon: Home, description: 'Acompanhamento pastoral', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
+  { label: 'GCA', href: '/discipulados', icon: Home, description: 'Grupos e acompanhamento', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
   { label: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
   { label: 'Configurações', href: '/configuracoes', icon: Settings, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor'] },
 ]

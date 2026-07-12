@@ -17,6 +17,7 @@ interface Discipleship {
   name: string
   leader_id: string | null
   supervisor_id: string | null
+  location_id?: string | null
   address: string | null
   neighborhood: string | null
   city: string | null
@@ -37,10 +38,12 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [leaders, setLeaders] = useState<{ id: string; full_name: string }[]>([])
+  const [locations, setLocations] = useState<any[]>([])
   const [form, setForm] = useState({
     name: discipleship.name,
     leader_id: discipleship.leader_id || '',
     supervisor_id: discipleship.supervisor_id || '',
+    location_id: discipleship.location_id || '',
     address: discipleship.address || '',
     neighborhood: discipleship.neighborhood || '',
     city: discipleship.city || '',
@@ -63,7 +66,16 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
       .eq('is_active', true)
       .order('full_name')
       .then(({ data }) => setLeaders(data || []))
+    supabase
+      .from('gca_locations')
+      .select('*')
+      .eq('church_id', discipleship.church_id)
+      .eq('active', true)
+      .order('name')
+      .then(({ data }) => setLocations(data || []))
   }, [open, discipleship.church_id])
+
+  const selectedLocation = locations.find(l => l.id === form.location_id)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -96,12 +108,24 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
       }
     }
 
+    // A linked location takes precedence over the manual address
+    const locationOverride = selectedLocation && form.location_id !== (discipleship.location_id || '')
+      ? {
+          address: selectedLocation.address || null,
+          neighborhood: selectedLocation.neighborhood || null,
+          city: selectedLocation.city || null,
+          latitude: selectedLocation.latitude ?? null,
+          longitude: selectedLocation.longitude ?? null,
+        }
+      : {}
+
     const { error: updateError } = await supabase
       .from('discipleships')
       .update({
         name: form.name.trim(),
         leader_id: form.leader_id || null,
         supervisor_id: form.supervisor_id || null,
+        location_id: form.location_id || null,
         address: form.address.trim() || null,
         neighborhood: form.neighborhood.trim() || null,
         city: form.city.trim() || null,
@@ -111,6 +135,7 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
         notes: form.notes.trim() || null,
         status: form.status,
         ...(latitude !== undefined ? { latitude, longitude } : {}),
+        ...locationOverride,
       })
       .eq('id', discipleship.id)
 
@@ -157,7 +182,20 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Endereço</Label>
+              <Label>Local</Label>
+              <Select value={form.location_id} onChange={e => set('location_id', e.target.value)} placeholder="Onde acontece o GCA">
+                {locations.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.location_type === 'igreja' ? '⛪' : '🏠'} {l.name}
+                  </option>
+                ))}
+              </Select>
+              {selectedLocation?.host_name && (
+                <p className="text-xs text-violet-600">🏠 Anfitrião: {selectedLocation.host_name}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Endereço <span className="text-slate-400 font-normal text-xs">(preenchido pelo local, se escolhido)</span></Label>
               <Input value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, número" />
             </div>
             <div className="grid grid-cols-2 gap-3">

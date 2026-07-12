@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -20,11 +20,13 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [leaders, setLeaders] = useState<{ id: string; full_name: string }[]>([])
+  const [locations, setLocations] = useState<any[]>([])
   const [form, setForm] = useState({
     name: '',
-    address: '',
-    neighborhood: '',
-    city: '',
+    leader_id: '',
+    supervisor_id: '',
+    location_id: '',
     day_of_week: '',
     time_start: '',
     meeting_frequency: 'semanal',
@@ -33,85 +35,115 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
 
   function set(k: string, v: string) { setForm(p => ({ ...p, [k]: v })) }
 
+  useEffect(() => {
+    if (!open) return
+    const supabase = createClient()
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('church_id', churchId)
+      .eq('is_active', true)
+      .order('full_name')
+      .then(({ data }) => setLeaders(data || []))
+    supabase
+      .from('gca_locations')
+      .select('*')
+      .eq('church_id', churchId)
+      .eq('active', true)
+      .order('name')
+      .then(({ data }) => setLocations(data || []))
+  }, [open, churchId])
+
+  const selectedLocation = locations.find(l => l.id === form.location_id)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     const supabase = createClient()
 
-    let latitude: number | null = null
-    let longitude: number | null = null
-
-    if (form.address && form.city) {
-      try {
-        const query = encodeURIComponent(`${form.address}, ${form.neighborhood || ''} ${form.city} Brasil`)
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
-          { headers: { 'User-Agent': 'IgrejaConectada/1.0' } }
-        )
-        const geoData = await res.json()
-        if (Array.isArray(geoData) && geoData.length > 0) {
-          latitude = parseFloat(geoData[0].lat)
-          longitude = parseFloat(geoData[0].lon)
-        }
-      } catch {
-        // silently ignore geocoding errors
-      }
-    }
+    // Address comes from the linked location (keeps the map working)
+    const loc = selectedLocation
 
     await supabase.from('discipleships').insert({
       church_id: churchId,
       name: form.name,
-      leader_id: userId,
-      address: form.address || null,
-      neighborhood: form.neighborhood || null,
-      city: form.city || null,
+      leader_id: form.leader_id || userId,
+      supervisor_id: form.supervisor_id || null,
+      location_id: form.location_id || null,
+      address: loc?.address || null,
+      neighborhood: loc?.neighborhood || null,
+      city: loc?.city || null,
+      latitude: loc?.latitude ?? null,
+      longitude: loc?.longitude ?? null,
       day_of_week: form.day_of_week || null,
       time_start: form.time_start || null,
       meeting_frequency: form.meeting_frequency,
       notes: form.notes || null,
       status: 'ativo',
       created_by: userId,
-      latitude,
-      longitude,
     })
 
     setLoading(false)
     setOpen(false)
     router.refresh()
-    setForm({ name: '', address: '', neighborhood: '', city: '', day_of_week: '', time_start: '', meeting_frequency: 'semanal', notes: '' })
+    setForm({ name: '', leader_id: '', supervisor_id: '', location_id: '', day_of_week: '', time_start: '', meeting_frequency: 'semanal', notes: '' })
   }
 
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4 mr-2" />
-        Novo Discipulado
+        Novo GCA
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent onClose={() => setOpen(false)}>
           <DialogHeader>
-            <DialogTitle>Novo Grupo de Discipulado</DialogTitle>
+            <DialogTitle>Novo GCA</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Nome do Discipulado *</Label>
-              <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Ex: Discipulado Casa Verde" required />
+              <Label>Nome do GCA *</Label>
+              <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Ex: GCA Casa Verde" required />
             </div>
-            <div className="space-y-2">
-              <Label>Endereço</Label>
-              <Input value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, número" />
-            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Bairro</Label>
-                <Input value={form.neighborhood} onChange={e => set('neighborhood', e.target.value)} placeholder="Bairro" />
+                <Label>Líder *</Label>
+                <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione" required>
+                  {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label>Cidade</Label>
-                <Input value={form.city} onChange={e => set('city', e.target.value)} placeholder="Cidade" />
+                <Label>Supervisor</Label>
+                <Select value={form.supervisor_id} onChange={e => set('supervisor_id', e.target.value)} placeholder="Selecione">
+                  {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+                </Select>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Local *</Label>
+              <Select value={form.location_id} onChange={e => set('location_id', e.target.value)} placeholder="Onde acontece o GCA" required>
+                {locations.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.location_type === 'igreja' ? '⛪' : '🏠'} {l.name}
+                  </option>
+                ))}
+              </Select>
+              {locations.length === 0 && (
+                <p className="text-xs text-amber-600">Nenhum local cadastrado — crie um em &ldquo;Locais dos GCAs&rdquo; na página anterior.</p>
+              )}
+              {selectedLocation && (
+                <div className="rounded-lg bg-violet-50 border border-violet-100 px-3 py-2 text-xs text-violet-800 space-y-0.5">
+                  {selectedLocation.host_name && <p>🏠 Anfitrião: <strong>{selectedLocation.host_name}</strong>{selectedLocation.host_phone && ` · ${selectedLocation.host_phone}`}</p>}
+                  {(selectedLocation.address || selectedLocation.neighborhood) && (
+                    <p>📍 {[selectedLocation.address, selectedLocation.neighborhood, selectedLocation.city].filter(Boolean).join(', ')}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2 col-span-1">
                 <Label>Dia</Label>
@@ -138,13 +170,15 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
                 </Select>
               </div>
             </div>
+
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} placeholder="Informações adicionais..." />
             </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={loading}>{loading ? 'Criando...' : 'Criar Discipulado'}</Button>
+              <Button type="submit" disabled={loading}>{loading ? 'Criando...' : 'Criar GCA'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

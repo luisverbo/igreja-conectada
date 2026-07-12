@@ -7,6 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Home, Users, AlertCircle, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { NewDiscipleshipDialog } from '@/components/discipulados/new-discipleship-dialog'
+import { LocationsSection } from '@/components/discipulados/locations-section'
+import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
+import { FULL_ACCESS } from '@/lib/roles'
 
 export default async function DiscipuladosPage() {
   const supabase = await createClient()
@@ -18,9 +21,11 @@ export default async function DiscipuladosPage() {
 
   const { data: discipleships } = await supabase
     .from('discipleships')
-    .select('*, leader:profiles!discipleships_leader_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name)')
+    .select('*, leader:profiles!discipleships_leader_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name)')
     .eq('church_id', profile.church_id)
     .order('name')
+
+  const canManageDept = [...FULL_ACCESS, 'discipleship_supervisor'].includes(profile.role)
 
   // Member counts
   const ids = discipleships?.map(d => d.id) || []
@@ -50,7 +55,7 @@ export default async function DiscipuladosPage() {
 
   return (
     <div>
-      <Header title="Discipulados" description="Acompanhamento pastoral — sem controle de presença" userName={profile.full_name} userRole={profile.role} />
+      <Header title="GCA" description="Grupos de Crescimento e Acompanhamento" userName={profile.full_name} userRole={profile.role} />
 
       <div className="p-6 space-y-6">
         {/* Info banner */}
@@ -58,15 +63,15 @@ export default async function DiscipuladosPage() {
           <Home className="h-5 w-5 text-violet-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-violet-800">Foco em Acompanhamento Pastoral</p>
-            <p className="text-sm text-violet-600">Discipulados registram observações e status espiritual. Não há controle de presença ou faltas.</p>
+            <p className="text-sm text-violet-600">Os GCAs registram observações e status espiritual. Não há controle de presença ou faltas.</p>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Grupos Ativos', value: activeGroups.length, icon: Home, color: 'text-violet-600', bg: 'bg-violet-50' },
-            { label: 'Pessoas em Discipulado', value: totalMembers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'GCAs Ativos', value: activeGroups.length, icon: Home, color: 'text-violet-600', bg: 'bg-violet-50' },
+            { label: 'Pessoas em GCA', value: totalMembers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Precisam de Cuidado', value: totalNeedCare, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
           ].map(s => {
             const Icon = s.icon
@@ -86,10 +91,26 @@ export default async function DiscipuladosPage() {
           })}
         </div>
 
+        {/* Locais + Equipe (gestão do departamento) */}
+        {canManageDept && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <LocationsSection churchId={profile.church_id} canEdit={canManageDept} />
+            <DepartmentTeamCard
+              churchId={profile.church_id}
+              currentUserId={profile.id}
+              title="Equipe de GCA"
+              description="Supervisores e líderes de GCA. Ao criar um GCA, você vincula o líder a um local."
+              deptRoles={['discipleship_supervisor', 'discipleship_leader']}
+              assignRoles={FULL_ACCESS.includes(profile.role) ? ['discipleship_supervisor', 'discipleship_leader'] : ['discipleship_leader']}
+              canEdit={canManageDept}
+            />
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">Grupos de Discipulado</h2>
-          <NewDiscipleshipDialog churchId={profile.church_id} userId={profile.id} />
+          <h2 className="text-base font-semibold text-slate-900">GCAs</h2>
+          {canManageDept && <NewDiscipleshipDialog churchId={profile.church_id} userId={profile.id} />}
         </div>
 
         {/* Table */}
@@ -98,7 +119,7 @@ export default async function DiscipuladosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Discipulado</TableHead>
+                  <TableHead>GCA</TableHead>
                   <TableHead>Líder</TableHead>
                   <TableHead>Supervisor</TableHead>
                   <TableHead>Local / Dia</TableHead>
@@ -117,11 +138,19 @@ export default async function DiscipuladosPage() {
                       <TableCell className="text-sm text-slate-600">{d.supervisor?.full_name || '—'}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {d.neighborhood && (
+                          {d.location ? (
+                            <div className="flex items-center gap-1 text-slate-700 font-medium">
+                              <span>{d.location.location_type === 'igreja' ? '⛪' : '🏠'}</span>
+                              <span>{d.location.name}</span>
+                            </div>
+                          ) : d.neighborhood ? (
                             <div className="flex items-center gap-1 text-slate-600">
                               <MapPin className="h-3 w-3" />
                               <span>{d.neighborhood}</span>
                             </div>
+                          ) : null}
+                          {d.location?.host_name && (
+                            <span className="text-slate-400 text-xs block">Anfitrião: {d.location.host_name}</span>
                           )}
                           {d.day_of_week && (
                             <span className="text-slate-400 text-xs">
@@ -156,7 +185,7 @@ export default async function DiscipuladosPage() {
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12 text-slate-400">
                       <Home className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      <p>Nenhum discipulado cadastrado</p>
+                      <p>Nenhum GCA cadastrado</p>
                     </TableCell>
                   </TableRow>
                 )}

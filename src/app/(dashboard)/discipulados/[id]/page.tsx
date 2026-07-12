@@ -34,7 +34,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
     { data: members },
   ] = await Promise.all([
     supabase.from('discipleships')
-      .select('*, leader:profiles!discipleships_leader_id_fkey(full_name, phone), supervisor:profiles!discipleships_supervisor_id_fkey(full_name)')
+      .select('*, leader:profiles!discipleships_leader_id_fkey(full_name, phone), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name, host_phone, address, neighborhood, city)')
       .eq('id', id)
       .single(),
     supabase.from('discipleship_members')
@@ -64,7 +64,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
           <Link href="/discipulados">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Discipulados
+              GCA
             </Button>
           </Link>
         </div>
@@ -81,7 +81,23 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                 <span>· {dayLabels[discipleship.day_of_week]} {discipleship.time_start?.slice(0, 5)}</span>
               )}
             </div>
-            {(discipleship.neighborhood || discipleship.city) && (
+            {discipleship.location ? (
+              <div className="text-sm text-slate-500 mt-0.5 space-y-0.5">
+                <p className="flex items-center gap-1">
+                  <span>{discipleship.location.location_type === 'igreja' ? '⛪' : '🏠'}</span>
+                  <strong className="text-slate-700">{discipleship.location.name}</strong>
+                  {discipleship.location.host_name && (
+                    <span className="text-slate-400"> · Anfitrião: {discipleship.location.host_name}{discipleship.location.host_phone ? ` (${discipleship.location.host_phone})` : ''}</span>
+                  )}
+                </p>
+                {(discipleship.location.address || discipleship.location.neighborhood) && (
+                  <p className="flex items-center gap-1 text-slate-400">
+                    <MapPin className="h-3 w-3" />
+                    {[discipleship.location.address, discipleship.location.neighborhood, discipleship.location.city].filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </div>
+            ) : (discipleship.neighborhood || discipleship.city) && (
               <p className="text-sm text-slate-400 mt-0.5 flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
                 {[discipleship.address, discipleship.neighborhood, discipleship.city].filter(Boolean).join(', ')}

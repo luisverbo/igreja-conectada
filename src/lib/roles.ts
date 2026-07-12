@@ -12,8 +12,8 @@ export const ROLE_LABELS: Record<string, string> = {
   new_members_teacher: 'Professor Novos Membros',
   new_members_leader: 'Líder de Novos Membros',
   new_members_helper: 'Auxiliar Novos Membros',
-  discipleship_supervisor: 'Supervisor de Discipulado',
-  discipleship_leader: 'Líder de Discipulado',
+  discipleship_supervisor: 'Supervisor de GCA',
+  discipleship_leader: 'Líder de GCA',
   viewer: 'Visualizador',
 }
 
@@ -47,6 +47,9 @@ export function assignableRoles(callerRole: string): string[] {
   }
   if (callerRole === 'counselor_leader') {
     return ['counselor']
+  }
+  if (callerRole === 'discipleship_supervisor') {
+    return ['discipleship_leader']
   }
   return []
 }
