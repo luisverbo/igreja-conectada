@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/utils'
 import { DISCIPLESHIP_STATUS_LABELS, type DiscipleshipMemberStatus } from '@/lib/types'
 import { AddMemberDialog } from '@/components/discipulados/add-member-dialog'
 import { ObservationDialog } from '@/components/discipulados/observation-dialog'
+import { EditDiscipleshipDialog } from '@/components/discipulados/edit-discipleship-dialog'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
   ativo: 'success',
@@ -90,6 +91,9 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
             <Badge variant={discipleship.status === 'ativo' ? 'success' : 'outline'}>
               {discipleship.status === 'ativo' ? 'Ativo' : 'Inativo'}
             </Badge>
+            {profile && ['super_admin', 'pastor', 'coordinator', 'discipleship_supervisor'].includes(profile.role) && (
+              <EditDiscipleshipDialog discipleship={discipleship} />
+            )}
             {profile && <AddMemberDialog discipleshipId={id} churchId={profile.church_id} userId={profile.id} userRole={profile.role} />}
           </div>
         </div>

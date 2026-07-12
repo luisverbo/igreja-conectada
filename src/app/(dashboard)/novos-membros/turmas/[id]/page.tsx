@@ -10,6 +10,7 @@ import { EnrollmentDialog } from '@/components/novos-membros/enrollment-dialog'
 import { AttendanceSheet } from '@/components/novos-membros/attendance-sheet'
 import { CompleteClassButton, RemoveEnrollmentButton, MarkStudentCompleteButton } from '@/components/novos-membros/turma-actions'
 import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
+import { EditClassDialog } from '@/components/novos-membros/edit-class-dialog'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -80,6 +81,9 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             <Badge variant={turma.status === 'ativa' ? 'success' : turma.status === 'concluida' ? 'info' : 'outline'}>
               {turma.status === 'ativa' ? 'Ativa' : turma.status === 'concluida' ? 'Concluída' : 'Cancelada'}
             </Badge>
+            {profile && ['super_admin', 'pastor', 'coordinator', 'new_members_teacher'].includes(profile.role) && (
+              <EditClassDialog turma={turma} />
+            )}
             {turma.registration_token && turma.status === 'ativa' && (
               <CopyLinkButton token={turma.registration_token} />
             )}

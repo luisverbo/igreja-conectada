@@ -12,9 +12,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, church_id, full_name')
+    .select('role, church_id, full_name, is_active')
     .eq('id', user.id)
     .single()
+
+  if (profile && profile.is_active === false) {
+    await supabase.auth.signOut()
+    redirect('/login')
+  }
 
   const role = profile?.role ?? 'viewer'
 

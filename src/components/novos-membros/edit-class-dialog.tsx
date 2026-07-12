@@ -2,28 +2,37 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2, AlertCircle } from 'lucide-react'
+import { Pencil, X, Loader2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-interface Props {
-  churchId: string
-  userId: string
+interface Turma {
+  id: string
+  church_id: string
+  name: string
+  teacher_id: string | null
+  start_date: string | null
+  day_of_week: string | null
+  time_start: string | null
+  location: string | null
 }
 
-export function NewClassDialog({ churchId, userId }: Props) {
+interface Props {
+  turma: Turma
+}
+
+export function EditClassDialog({ turma }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [teachers, setTeachers] = useState<{ id: string; full_name: string }[]>([])
   const [form, setForm] = useState({
-    name: '',
-    teacher_id: '',
-    start_date: '',
-    day_of_week: '',
-    time_start: '',
-    location: '',
-    total_lessons: '4',
+    name: turma.name,
+    teacher_id: turma.teacher_id || '',
+    start_date: turma.start_date || '',
+    day_of_week: turma.day_of_week || '',
+    time_start: turma.time_start?.slice(0, 5) || '',
+    location: turma.location || '',
   })
 
   function set(k: string, v: string) { setForm(p => ({ ...p, [k]: v })) }
@@ -34,17 +43,11 @@ export function NewClassDialog({ churchId, userId }: Props) {
     supabase
       .from('profiles')
       .select('id, full_name')
-      .eq('church_id', churchId)
+      .eq('church_id', turma.church_id)
       .eq('is_active', true)
       .order('full_name')
       .then(({ data }) => setTeachers(data || []))
-  }, [open, churchId])
-
-  function close() {
-    setOpen(false)
-    setError(null)
-    setForm({ name: '', teacher_id: '', start_date: '', day_of_week: '', time_start: '', location: '', total_lessons: '4' })
-  }
+  }, [open, turma.church_id])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -52,45 +55,26 @@ export function NewClassDialog({ churchId, userId }: Props) {
     setError(null)
     const supabase = createClient()
 
-    const { data: cls, error: insertError } = await supabase
+    const { error: updateError } = await supabase
       .from('new_members_classes')
-      .insert({
-        church_id: churchId,
+      .update({
         name: form.name.trim(),
-        teacher_id: form.teacher_id || userId,
+        teacher_id: form.teacher_id || null,
         start_date: form.start_date || null,
         day_of_week: form.day_of_week || null,
         time_start: form.time_start || null,
         location: form.location.trim() || null,
-        total_lessons: parseInt(form.total_lessons) || 4,
-        status: 'ativa',
-        created_by: userId,
       })
-      .select()
-      .single()
+      .eq('id', turma.id)
 
-    if (insertError || !cls) {
-      setError(insertError?.message || 'Erro ao criar turma. Tente novamente.')
-      setLoading(false)
-      return
-    }
-
-    // Create default lessons
-    const lessons = Array.from({ length: parseInt(form.total_lessons) || 4 }, (_, i) => ({
-      class_id: cls.id,
-      lesson_number: i + 1,
-      title: `Aula ${i + 1}`,
-      status: 'pendente',
-    }))
-    const { error: lessonsError } = await supabase.from('new_members_lessons').insert(lessons)
-    if (lessonsError) {
-      setError('Turma criada, mas houve erro ao criar as aulas. Atualize a página.')
+    if (updateError) {
+      setError('Erro ao salvar: ' + updateError.message)
       setLoading(false)
       return
     }
 
     setLoading(false)
-    close()
+    setOpen(false)
     router.refresh()
   }
 
@@ -101,37 +85,30 @@ export function NewClassDialog({ churchId, userId }: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
       >
-        <Plus className="h-4 w-4" />
-        Nova Turma
+        <Pencil className="h-4 w-4" />
+        Editar
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
-              <h2 className="text-base font-bold text-slate-900">Nova Turma de Novos Membros</h2>
-              <button onClick={close} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
+              <h2 className="text-base font-bold text-slate-900">Editar Turma</h2>
+              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div>
                 <label className={labelClass}>Nome da Turma *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={e => set('name', e.target.value)}
-                  placeholder="Ex: Turma Maio/2026"
-                  className={inputClass}
-                />
+                <input type="text" required value={form.name} onChange={e => set('name', e.target.value)} className={inputClass} />
               </div>
 
               <div>
                 <label className={labelClass}>Professor</label>
                 <select value={form.teacher_id} onChange={e => set('teacher_id', e.target.value)} className={inputClass}>
-                  <option value="">Eu mesmo</option>
+                  <option value="">Selecione</option>
                   {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
               </div>
@@ -142,10 +119,8 @@ export function NewClassDialog({ churchId, userId }: Props) {
                   <input type="date" value={form.start_date} onChange={e => set('start_date', e.target.value)} className={inputClass} />
                 </div>
                 <div>
-                  <label className={labelClass}>Total de Aulas</label>
-                  <select value={form.total_lessons} onChange={e => set('total_lessons', e.target.value)} className={inputClass}>
-                    {[3,4,5,6,7,8,10,12].map(n => <option key={n} value={n}>{n} aulas</option>)}
-                  </select>
+                  <label className={labelClass}>Horário</label>
+                  <input type="time" value={form.time_start} onChange={e => set('time_start', e.target.value)} className={inputClass} />
                 </div>
               </div>
 
@@ -164,14 +139,9 @@ export function NewClassDialog({ churchId, userId }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>Horário</label>
-                  <input type="time" value={form.time_start} onChange={e => set('time_start', e.target.value)} className={inputClass} />
+                  <label className={labelClass}>Local</label>
+                  <input type="text" value={form.location} onChange={e => set('location', e.target.value)} placeholder="Sala, endereço..." className={inputClass} />
                 </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Local</label>
-                <input type="text" value={form.location} onChange={e => set('location', e.target.value)} placeholder="Sala, endereço..." className={inputClass} />
               </div>
 
               {error && (
@@ -182,11 +152,11 @@ export function NewClassDialog({ churchId, userId }: Props) {
               )}
 
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={close} className="flex-1 h-10 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <button type="button" onClick={() => setOpen(false)} className="flex-1 h-10 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Cancelar
                 </button>
                 <button type="submit" disabled={loading} className="flex-1 h-10 rounded-lg bg-violet-600 text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-violet-700">
-                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Criando...</> : 'Criar Turma'}
+                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Salvando...</> : 'Salvar'}
                 </button>
               </div>
             </form>

@@ -125,6 +125,48 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
       { person_id: person.id, event_type: 'aceitou_jesus', recorded_by: userId },
     ])
 
+    // Link the conversion to today's culto so appeal stats stay accurate.
+    // Only counts as a decision when the person accepted Jesus here.
+    if (form.origin === 'aceitou_jesus_aqui') {
+      const today = new Date().toISOString().split('T')[0]
+      let appealId: string | null = null
+
+      const { data: todayAppeal } = await supabase
+        .from('appeals')
+        .select('id')
+        .eq('church_id', churchId)
+        .eq('culto_date', today)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (todayAppeal) {
+        appealId = todayAppeal.id
+      } else {
+        const { data: newAppeal } = await supabase
+          .from('appeals')
+          .insert({
+            church_id: churchId,
+            name: `Culto — ${new Date().toLocaleDateString('pt-BR')}`,
+            culto_date: today,
+            created_by: userId,
+          })
+          .select('id')
+          .single()
+        appealId = newAppeal?.id ?? null
+      }
+
+      if (appealId) {
+        await supabase.from('decisions').insert({
+          appeal_id: appealId,
+          person_id: person.id,
+          counselor_id: userId,
+          decision_type: 'aceitou_jesus',
+          first_time: true,
+        })
+      }
+    }
+
     setSuccess(form.full_name.trim())
     setForm({ full_name: '', phone: '', birth_date: '', cep: '', address: '', neighborhood: '', city: '', state: '', origin: '', gender: '' })
     setCoords(null)

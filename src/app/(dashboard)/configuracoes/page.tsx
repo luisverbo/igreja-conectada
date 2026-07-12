@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Settings, Users, Church, MessageSquare } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { CreateUserDialog } from '@/components/configuracoes/create-user-dialog'
+import { EditUserDialog } from '@/components/configuracoes/edit-user-dialog'
+import { EditChurchDialog } from '@/components/configuracoes/edit-church-dialog'
 import { WhatsAppSection } from '@/components/configuracoes/whatsapp-section'
 
 const roleLabels: Record<string, string> = {
@@ -53,10 +55,13 @@ export default async function ConfiguracoesPage() {
         {/* Church info */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Church className="h-4 w-4 text-violet-600" />
-              Informações da Igreja
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Church className="h-4 w-4 text-violet-600" />
+                Informações da Igreja
+              </CardTitle>
+              {church && canManageUsers && <EditChurchDialog church={church} />}
+            </div>
           </CardHeader>
           <CardContent>
             {church ? (
@@ -108,6 +113,7 @@ export default async function ConfiguracoesPage() {
                     <TableHead>Função</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Desde</TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -129,6 +135,11 @@ export default async function ConfiguracoesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-slate-500">{formatDate(u.created_at)}</TableCell>
+                      <TableCell>
+                        {u.id !== profile.id && u.role !== 'super_admin' && (
+                          <EditUserDialog user={u} />
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
