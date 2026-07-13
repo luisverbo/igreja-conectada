@@ -89,8 +89,11 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                 <Badge variant={statusVariant[person.status as PersonStatus] || 'secondary'}>
                   {PERSON_STATUS_LABELS[person.status as PersonStatus]}
                 </Badge>
+                {person.origin === 'veio_de_outra_igreja' && (
+                  <Badge variant="info">🏛️ Veio de outra igreja</Badge>
+                )}
                 {person.can_serve && <Badge variant="success">Apto para Servir</Badge>}
-                {person.accepted_jesus_at && (
+                {person.accepted_jesus_at && person.origin !== 'veio_de_outra_igreja' && (
                   <span className="text-sm text-slate-500">
                     Em jornada há {journeyDuration(person.accepted_jesus_at)}
                   </span>
@@ -170,6 +173,14 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Profissão</dt>
                     <dd className="text-slate-700">{person.profession}</dd>
+                  </div>
+                )}
+                {person.origin && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-500 flex-shrink-0">Origem</dt>
+                    <dd className="text-slate-700 text-right">
+                      {person.origin === 'veio_de_outra_igreja' ? 'Veio de outra igreja / já era crente' : 'Novo convertido (aceitou Jesus aqui)'}
+                    </dd>
                   </div>
                 )}
                 {person.how_met_church && (

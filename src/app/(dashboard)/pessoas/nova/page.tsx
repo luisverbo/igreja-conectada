@@ -28,10 +28,13 @@ export default function NovaPessoaPage() {
     neighborhood: '',
     city: '',
     state: '',
+    origin: 'aceitou_jesus_aqui', // 'aceitou_jesus_aqui' | 'veio_de_outra_igreja'
     accepted_jesus_at: '',
     how_met_church: '',
     notes: '',
   })
+
+  const jaCrente = form.origin === 'veio_de_outra_igreja'
 
   function handleChange(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -62,6 +65,8 @@ export default function NovaPessoaPage() {
       neighborhood: form.neighborhood || null,
       city: form.city || null,
       state: form.state || null,
+      origin: form.origin,
+      // Só grava data de conversão quando ela foi informada de fato
       accepted_jesus_at: form.accepted_jesus_at || null,
       how_met_church: form.how_met_church || null,
       notes: form.notes || null,
@@ -82,19 +87,32 @@ export default function NovaPessoaPage() {
       return
     }
 
-    // Registrar evento de jornada
+    // Sempre registra o cadastro
     await supabase.from('journey_events').insert({
       person_id: person.id,
       event_type: 'cadastrado',
-      description: 'Pessoa cadastrada no sistema',
+      description: jaCrente
+        ? 'Cadastrado no sistema (já era crente / veio de outra igreja)'
+        : 'Pessoa cadastrada no sistema',
       recorded_by: profile.id,
     })
 
-    if (form.accepted_jesus_at) {
+    // "Aceitou Jesus" só é registrado para NOVO CONVERTIDO, ou quando a
+    // pessoa que já é crente informou a data real da conversão.
+    // Nunca cria uma conversão falsa com a data de hoje.
+    if (!jaCrente) {
       await supabase.from('journey_events').insert({
         person_id: person.id,
         event_type: 'aceitou_jesus',
         description: 'Aceitou Jesus',
+        event_date: form.accepted_jesus_at || new Date().toISOString().split('T')[0],
+        recorded_by: profile.id,
+      })
+    } else if (form.accepted_jesus_at) {
+      await supabase.from('journey_events').insert({
+        person_id: person.id,
+        event_type: 'aceitou_jesus',
+        description: 'Aceitou Jesus (informado no cadastro)',
         event_date: form.accepted_jesus_at,
         recorded_by: profile.id,
       })
@@ -252,15 +270,52 @@ export default function NovaPessoaPage() {
               <CardTitle>Jornada Espiritual</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Origem — evita marcar como novo convertido quem já é crente */}
+              <div className="space-y-2">
+                <Label>Situação espiritual *</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleChange('origin', 'aceitou_jesus_aqui')}
+                    className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${
+                      !jaCrente ? 'border-violet-600 bg-violet-50' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <p className={`text-sm font-bold ${!jaCrente ? 'text-violet-900' : 'text-slate-700'}`}>✝️ Novo convertido</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Aceitou Jesus agora / recentemente com a gente</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleChange('origin', 'veio_de_outra_igreja')}
+                    className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${
+                      jaCrente ? 'border-violet-600 bg-violet-50' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <p className={`text-sm font-bold ${jaCrente ? 'text-violet-900' : 'text-slate-700'}`}>🏛️ Já é crente</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Veio de outra igreja / já congregava há um tempo</p>
+                  </button>
+                </div>
+                {jaCrente && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    ℹ️ Não será registrada uma conversão com a data de hoje. A pessoa entra no sistema para você encaminhá-la a Novos Membros, GCA ou acompanhamento.
+                  </p>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="accepted_jesus_at">Data em que Aceitou Jesus</Label>
+                  <Label htmlFor="accepted_jesus_at">
+                    {jaCrente ? 'Desde quando é crente (opcional)' : 'Data em que Aceitou Jesus'}
+                  </Label>
                   <Input
                     id="accepted_jesus_at"
                     type="date"
                     value={form.accepted_jesus_at}
                     onChange={(e) => handleChange('accepted_jesus_at', e.target.value)}
                   />
+                  {!jaCrente && (
+                    <p className="text-xs text-slate-400">Deixe em branco para usar a data de hoje.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="how_met_church">Como chegou à Igreja</Label>
