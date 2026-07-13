@@ -30,6 +30,7 @@ export function FichaForm({ token, churchName, turmaName, filledBy, volunteerNam
     is_entrepreneur: false, profession: '',
     address_type: 'nacional', has_cpf: true, cpf: '', rg: '', rg_ssp: '',
     naturalidade: '', nacionalidade: 'BRASILEIRA', birth_date: '', marital_status: MARITAL_STATUS[0],
+    spouse_name: '', marriage_date: '',
     cep: '', address: '', city: '', neighborhood: '', sub_neighborhood: '', state: 'AC', country: 'BRASIL', number: '', complement: '',
     phone1: '', phone1_op: 'OI', phone1_whatsapp: false,
     phone2: '', phone2_op: 'OI', phone2_whatsapp: false,
@@ -282,6 +283,19 @@ export function FichaForm({ token, churchName, turmaName, filledBy, volunteerNam
               </select>
             </div>
           </div>
+
+          {form.marital_status === 'CASADO (A)' && (
+            <div className="grid sm:grid-cols-2 gap-4 rounded-xl bg-violet-50 border border-violet-100 p-4">
+              <div>
+                <label className={label}>Nome do cônjuge</label>
+                <input value={form.spouse_name} onChange={e => set('spouse_name', e.target.value)} placeholder="Nome completo do cônjuge" className={input} />
+              </div>
+              <div>
+                <label className={label}>Data do casamento</label>
+                <input type="date" value={form.marriage_date} onChange={e => set('marriage_date', e.target.value)} className={input} />
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <label className={label}>CEP</label>

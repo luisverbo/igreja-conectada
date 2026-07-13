@@ -36,6 +36,10 @@ export default async function FichaViewPage({ params }: { params: Promise<{ id: 
     ['Nacionalidade', ficha.nacionalidade || '—'],
     ['Data de nascimento', fmt(ficha.birth_date)],
     ['Estado civil', ficha.marital_status || '—'],
+    ...(ficha.marital_status === 'CASADO (A)' ? [
+      ['Cônjuge', ficha.spouse_name || '—'] as [string, string],
+      ['Data do casamento', fmt(ficha.marriage_date)] as [string, string],
+    ] : []),
     ['Endereço', [ficha.address, ficha.number, ficha.complement].filter(Boolean).join(', ') || '—'],
     ['Bairro / Sub bairro', [ficha.neighborhood, ficha.sub_neighborhood].filter(Boolean).join(' / ') || '—'],
     ['Cidade / Estado', [ficha.city, ficha.state].filter(Boolean).join(' / ') || '—'],

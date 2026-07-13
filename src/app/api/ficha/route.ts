@@ -132,6 +132,8 @@ export async function POST(req: NextRequest) {
     nacionalidade: form.nacionalidade || null,
     birth_date: form.birth_date || null,
     marital_status: form.marital_status || null,
+    spouse_name: form.marital_status === 'CASADO (A)' ? (form.spouse_name || null) : null,
+    marriage_date: form.marital_status === 'CASADO (A)' ? (form.marriage_date || null) : null,
     cep: form.cep || null,
     address: form.address || null,
     city: form.city || null,
