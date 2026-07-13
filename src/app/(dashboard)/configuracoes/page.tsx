@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -31,11 +31,8 @@ const roleVariant: Record<string, 'default' | 'secondary' | 'success' | 'warning
 }
 
 export default async function ConfiguracoesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return null
-
-  const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role, id').eq('id', user.id).single()
   if (!profile?.church_id) return null
 
   const [{ data: church }, { data: users }] = await Promise.all([

@@ -22,6 +22,10 @@ CREATE TABLE IF NOT EXISTS gca_locations (
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
--- RLS church_access igual às demais tabelas
+ALTER TABLE gca_locations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "church_access" ON gca_locations;
+CREATE POLICY "church_access" ON gca_locations FOR ALL USING (
+  church_id IN (SELECT church_id FROM profiles WHERE id = auth.uid())
+);
 
 ALTER TABLE discipleships ADD COLUMN IF NOT EXISTS location_id UUID REFERENCES gca_locations(id) ON DELETE SET NULL;

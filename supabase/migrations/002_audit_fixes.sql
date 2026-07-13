@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS whatsapp_instances (
 
 ALTER TABLE whatsapp_instances ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "church_access" ON whatsapp_instances
+DROP POLICY IF EXISTS "church_access" ON whatsapp_instances;
+CREATE POLICY "church_access" ON whatsapp_instances
   FOR ALL USING (
     church_id IN (
       SELECT church_id FROM profiles WHERE id = auth.uid()

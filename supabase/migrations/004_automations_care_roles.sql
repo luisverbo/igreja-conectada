@@ -53,5 +53,21 @@ CREATE TABLE IF NOT EXISTS care_rules (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- RLS church_access nas três tabelas (igual às demais)
+-- RLS (aplicado de fato — reproduzível em deploy limpo)
+ALTER TABLE followup_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scheduled_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE care_rules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "church_access" ON followup_rules;
+CREATE POLICY "church_access" ON followup_rules FOR ALL USING (
+  church_id IN (SELECT church_id FROM profiles WHERE id = auth.uid())
+);
+DROP POLICY IF EXISTS "church_access" ON scheduled_messages;
+CREATE POLICY "church_access" ON scheduled_messages FOR ALL USING (
+  church_id IN (SELECT church_id FROM profiles WHERE id = auth.uid())
+);
+DROP POLICY IF EXISTS "church_access" ON care_rules;
+CREATE POLICY "church_access" ON care_rules FOR ALL USING (
+  church_id IN (SELECT church_id FROM profiles WHERE id = auth.uid())
+);
 -- + pg_cron chamando /api/cron/dispatch a cada 15 minutos
+-- (Obs: a migration 008 substitui essas policies pelas versões por papel)

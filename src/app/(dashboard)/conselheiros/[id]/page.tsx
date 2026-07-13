@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Heart, UserPlus, Phone } from 'lucide-react'
@@ -12,13 +12,8 @@ import { EditAppealDialog, DeleteAppealButton, DeleteDecisionButton } from '@/co
 
 export default async function AppealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return null
-
-  const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role, id').eq('id', user.id).single()
-
   const [{ data: appeal }, { data: decisions }] = await Promise.all([
     supabase.from('appeals').select('*').eq('id', id).single(),
     supabase.from('decisions')

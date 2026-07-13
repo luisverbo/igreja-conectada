@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, BookOpen, Users, CheckCircle, GraduationCap } from 'lucide-react'
@@ -16,12 +16,8 @@ import { EnrollmentToggle } from '@/components/novos-membros/enrollment-toggle'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return null
-  const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role, id').eq('id', user.id).single()
-
   const [
     { data: turma },
     { data: lessons },

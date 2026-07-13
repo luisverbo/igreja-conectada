@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { notFound, redirect } from 'next/navigation'
 import { FULL_ACCESS } from '@/lib/roles'
 import Link from 'next/link'
@@ -24,12 +24,8 @@ const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 
 
 export default async function DiscipuladoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return null
-  const { data: profile } = await supabase.from('profiles').select('id, church_id, full_name, role').eq('id', user.id).single()
-
   const [
     { data: discipleship },
     { data: members },

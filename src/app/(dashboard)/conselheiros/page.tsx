@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { Header } from '@/components/layout/header'
 import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,11 +12,8 @@ import { NewAppealDialog } from '@/components/conselheiros/new-appeal-dialog'
 import { CounselorNewConvert } from '@/components/conselheiros/counselor-new-convert'
 
 export default async function ConselheirosPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return null
-
-  const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role').eq('id', user.id).single()
   if (!profile?.church_id) return null
 
   if (profile.role === 'counselor') {

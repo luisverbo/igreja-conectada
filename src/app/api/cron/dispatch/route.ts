@@ -69,8 +69,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, processed: due.length, sent, failed })
 }
-
-// pg_net may issue GET depending on config — accept both
-export async function GET(req: NextRequest) {
-  return POST(req)
-}

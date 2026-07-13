@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,11 +15,8 @@ import { DepartmentTeamCard } from '@/components/configuracoes/department-team-c
 import { FULL_ACCESS } from '@/lib/roles'
 
 export default async function NovosMembrosPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return null
-
-  const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role, id').eq('id', user.id).single()
   if (!profile?.church_id) return null
 
   const [{ data: classes }, { data: church }, { data: waitlist }] = await Promise.all([

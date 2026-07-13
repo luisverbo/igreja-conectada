@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { Header } from '@/components/layout/header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,11 +25,8 @@ const PAGE_SIZE = 50
 
 export default async function PessoasPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; page?: string }> }) {
   const params = await searchParams
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return null
-
-  const { data: profile } = await supabase.from('profiles').select('church_id, full_name, role').eq('id', user.id).single()
   if (!profile?.church_id) return null
 
   const page = Math.max(1, parseInt(params.page || '1') || 1)

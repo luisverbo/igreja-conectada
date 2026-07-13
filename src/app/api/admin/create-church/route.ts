@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (churchError || !church) {
-    return NextResponse.json({ error: churchError?.message || 'Erro ao criar igreja' }, { status: 400 })
+    return NextResponse.json({ error: 'Erro ao criar igreja.' }, { status: 400 })
   }
 
   // Create initial admin user if provided

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -82,15 +83,13 @@ const journeyEventMeta: Record<string, { emoji: string; label: string; bg: strin
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile: sessionProfile } = await getSessionProfile()
   if (!user) return null
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*, churches(name)')
-    .eq('id', user.id)
-    .single()
+  const { data: churchRow } = sessionProfile?.church_id
+    ? await supabase.from('churches').select('name').eq('id', sessionProfile.church_id).single()
+    : { data: null }
+  const profile = sessionProfile ? { ...sessionProfile, churches: churchRow } : null
 
   const churchId = profile?.church_id
   if (!churchId) {

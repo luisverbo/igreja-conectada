@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { CounselorNewConvert } from '@/components/conselheiros/counselor-new-convert'
@@ -7,16 +7,8 @@ import { CounselorNewConvert } from '@/components/conselheiros/counselor-new-con
 // with access to the Conselheiros tab (e.g., a GCA leader who also
 // serves as counselor during services).
 export default async function NovoConvertidoPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('church_id, full_name')
-    .eq('id', user.id)
-    .single()
-  if (!profile?.church_id) return null
+  const { user, profile } = await getSessionProfile()
+  if (!user || !profile?.church_id) return null
 
   return (
     <div className="min-h-full bg-slate-50">

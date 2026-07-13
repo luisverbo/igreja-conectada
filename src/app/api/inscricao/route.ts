@@ -5,21 +5,21 @@ import { msgBoasVindasNovosMembros, DAY_LABELS } from '@/lib/whatsapp-templates'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { classId, churchId, token, full_name, phone, email, birth_date } = body
+  const { classId, token, full_name, phone, email, birth_date } = body
 
-  if (!classId || !churchId || (!token && !body.churchToken) || !full_name?.trim() || !phone?.trim()) {
+  if (!classId || (!token && !body.churchToken) || !full_name?.trim() || !phone?.trim()) {
     return NextResponse.json({ error: 'Dados obrigatórios ausentes.' }, { status: 400 })
   }
 
   const supabase = createAdminClient()
 
   // Token can be the class token (per-class link) or the church token (standing QR)
-  let turma: { id: string; status: string; enrollment_open: boolean } | null = null
+  let turma: { id: string; status: string; enrollment_open: boolean; church_id: string } | null = null
 
   if (token) {
     const { data: byClassToken } = await supabase
       .from('new_members_classes')
-      .select('id, status, enrollment_open')
+      .select('id, status, enrollment_open, church_id')
       .eq('id', classId)
       .eq('registration_token', token)
       .maybeSingle()
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (church) {
       const { data: byChurch } = await supabase
         .from('new_members_classes')
-        .select('id, status, enrollment_open')
+        .select('id, status, enrollment_open, church_id')
         .eq('id', classId)
         .eq('church_id', church.id)
         .maybeSingle()
@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
   if (!turma.enrollment_open) {
     return NextResponse.json({ error: 'As inscrições desta turma já foram encerradas.' }, { status: 400 })
   }
+
+  // A igreja vem SEMPRE da turma validada — nunca do corpo da requisição
+  const churchId = turma.church_id
 
   // Find existing person by phone, email, or exact name (in order of confidence)
   let existingId: string | null = null

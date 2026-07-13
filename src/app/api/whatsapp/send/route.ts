@@ -10,8 +10,12 @@ export async function POST(req: NextRequest) {
   const { phone, message, message_type, person_id } = await req.json()
   if (!phone || !message) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
-  const { data: profile } = await supabase.from('profiles').select('church_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('church_id, role').eq('id', user.id).single()
   if (!profile?.church_id) return NextResponse.json({ error: 'Sem igreja.' }, { status: 403 })
+  // Envio livre de mensagens é restrito à liderança (evita spam pela instância da igreja)
+  if (!['super_admin', 'pastor', 'coordinator', 'supervisor'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Sem permissão para enviar mensagens.' }, { status: 403 })
+  }
 
   const sent = await sendAndLogWhatsApp({
     churchId: profile.church_id,

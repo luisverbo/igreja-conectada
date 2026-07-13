@@ -38,13 +38,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ instances: instances || [] })
   }
 
+  // A instância precisa pertencer à igreja do usuário — impede
+  // que uma igreja acesse o QR/status da instância de outra
+  async function ownsInstance(name: string) {
+    const { data } = await supabase
+      .from('whatsapp_instances')
+      .select('id')
+      .eq('instance_name', name)
+      .eq('church_id', profile!.church_id)
+      .maybeSingle()
+    return !!data
+  }
+
   if (action === 'qr' && instance) {
+    if (!(await ownsInstance(instance))) {
+      return NextResponse.json({ error: 'Instância não encontrada' }, { status: 404 })
+    }
     const { ok, data } = await evo(`/instance/connect/${instance}`)
     if (!ok) return NextResponse.json({ error: 'Erro ao obter QR Code' }, { status: 400 })
     return NextResponse.json(data)
   }
 
   if (action === 'status' && instance) {
+    if (!(await ownsInstance(instance))) {
+      return NextResponse.json({ error: 'Instância não encontrada' }, { status: 404 })
+    }
     const { ok, data } = await evo(`/instance/connectionState/${instance}`)
     if (!ok) return NextResponse.json({ error: 'Erro ao obter status' }, { status: 400 })
 
@@ -75,6 +93,17 @@ export async function POST(req: NextRequest) {
   }
 
   const { action, instance_name, display_name } = await req.json()
+
+  // Ações sobre instância existente exigem que ela seja da igreja do usuário
+  if (['delete', 'logout', 'set_default'].includes(action) && instance_name) {
+    const { data: owned } = await supabase
+      .from('whatsapp_instances')
+      .select('id')
+      .eq('instance_name', instance_name)
+      .eq('church_id', profile.church_id)
+      .maybeSingle()
+    if (!owned) return NextResponse.json({ error: 'Instância não encontrada' }, { status: 404 })
+  }
 
   if (action === 'create') {
     if (!instance_name || !display_name) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })

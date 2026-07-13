@@ -3,13 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Church, CheckCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-const CHURCH_ID = 'e7e4412f-1a99-4a2a-b536-5f9618815f2e'
 
 export function SetupForm() {
   const router = useRouter()
@@ -38,46 +35,25 @@ export function SetupForm() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: { full_name: form.full_name }
-      }
+    // Bootstrap runs server-side with service role — the client can no
+    // longer self-assign roles (blocked by RLS)
+    const res = await fetch('/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: form.full_name,
+        email: form.email,
+        password: form.password,
+      }),
     })
+    const data = await res.json()
+    setLoading(false)
 
-    if (authError || !authData.user) {
-      setError(authError?.message || 'Erro ao criar conta.')
-      setLoading(false)
+    if (!res.ok) {
+      setError(data.error || 'Erro ao criar conta.')
       return
     }
 
-    // Update profile with church_id, full_name and super_admin role
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({
-        church_id: CHURCH_ID,
-        full_name: form.full_name,
-        role: 'super_admin',
-        is_active: true,
-      })
-      .eq('id', authData.user.id)
-
-    if (profileError) {
-      // Try upsert if update failed
-      await supabase.from('profiles').upsert({
-        id: authData.user.id,
-        church_id: CHURCH_ID,
-        full_name: form.full_name,
-        role: 'super_admin',
-        is_active: true,
-      })
-    }
-
-    setLoading(false)
     setStep('done')
   }
 

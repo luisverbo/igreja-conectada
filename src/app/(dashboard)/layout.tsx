@@ -1,20 +1,13 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/get-profile'
 import { Sidebar } from '@/components/layout/sidebar'
 import { MobileShell } from '@/components/layout/mobile-shell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
 
   if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, church_id, full_name, is_active, custom_access')
-    .eq('id', user.id)
-    .single()
 
   if (profile && profile.is_active === false) {
     await supabase.auth.signOut()
