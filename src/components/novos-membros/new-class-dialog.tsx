@@ -16,6 +16,7 @@ export function NewClassDialog({ churchId, userId }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [teachers, setTeachers] = useState<{ id: string; full_name: string }[]>([])
+  const [defaultLessons, setDefaultLessons] = useState<{ title: string; title2?: string }[] | null>(null)
   const [form, setForm] = useState({
     name: '',
     start_date: '',
@@ -40,6 +41,13 @@ export function NewClassDialog({ churchId, userId }: Props) {
       .eq('is_active', true)
       .order('full_name')
       .then(({ data }) => setTeachers(data || []))
+    // Modelo de aulas pré-definido da igreja
+    supabase
+      .from('churches')
+      .select('nm_default_lessons')
+      .eq('id', churchId)
+      .single()
+      .then(({ data }) => setDefaultLessons(Array.isArray(data?.nm_default_lessons) ? data!.nm_default_lessons : null))
   }, [open, churchId])
 
   function close() {
@@ -82,11 +90,12 @@ export function NewClassDialog({ churchId, userId }: Props) {
       return
     }
 
-    // Create standard lessons with per-lesson teacher
+    // Create lessons — usa o modelo pré-definido da igreja quando existir
     const lessons = Array.from({ length: totalLessons }, (_, i) => ({
       class_id: cls.id,
       lesson_number: i + 1,
-      title: `Aula ${i + 1}`,
+      title: defaultLessons?.[i]?.title || `Aula ${i + 1}`,
+      title2: defaultLessons?.[i]?.title2 || null,
       status: 'pendente',
       teacher_id: lessonTeachers[i] || null,
     }))

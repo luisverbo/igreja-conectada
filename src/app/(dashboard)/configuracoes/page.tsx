@@ -11,6 +11,8 @@ import { EditChurchDialog } from '@/components/configuracoes/edit-church-dialog'
 import { WhatsAppSection } from '@/components/configuracoes/whatsapp-section'
 import { FollowupRulesSection } from '@/components/configuracoes/followup-rules-section'
 import { CareRulesSection } from '@/components/configuracoes/care-rules-section'
+import { DefaultLessonsSection } from '@/components/configuracoes/default-lessons-section'
+import { BookOpen } from 'lucide-react'
 import { ROLE_LABELS } from '@/lib/roles'
 
 const roleLabels = ROLE_LABELS
@@ -154,6 +156,21 @@ export default async function ConfiguracoesPage() {
             </CardHeader>
             <CardContent>
               <WhatsAppSection />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Modelo de aulas de Novos Membros */}
+        {canManageUsers && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-blue-600" />
+                Aulas Padrão de Novos Membros
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DefaultLessonsSection churchId={profile.church_id} />
             </CardContent>
           </Card>
         )}

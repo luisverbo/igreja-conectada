@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const { data: due } = await admin
     .from('scheduled_messages')
-    .select('id, church_id, person_id, phone, rule_id, followup_rules(message_type, content, media_url, active), people(full_name)')
+    .select('id, church_id, person_id, phone, rule_id, custom_message, followup_rules(message_type, content, media_url, active), people(full_name)')
     .eq('status', 'pendente')
     .lte('send_at', new Date().toISOString())
     .limit(50)
@@ -35,6 +35,17 @@ export async function POST(req: NextRequest) {
   for (const msg of due) {
     const rule = msg.followup_rules as any
     const person = msg.people as any
+
+    // Mensagem avulsa (ex: lembrete de aula ao professor) — envia direto
+    if (msg.custom_message) {
+      const ok = await sendWhatsAppMessage({ churchId: msg.church_id, phone: msg.phone, message: msg.custom_message })
+      await admin.from('scheduled_messages').update({
+        status: ok ? 'enviado' : 'falhou',
+        sent_at: ok ? new Date().toISOString() : null,
+      }).eq('id', msg.id)
+      if (ok) sent++; else failed++
+      continue
+    }
 
     // Rule deleted or deactivated after scheduling → cancel
     if (!rule || rule.active === false) {

@@ -11,3 +11,12 @@
 -- reaproveitamento de aulas quando o aluno rematricula sem ter
 -- concluído a turma anterior.
 -- (SQL completo aplicado — ver Supabase)
+
+-- ============================================================
+-- Migrations posteriores (aplicadas via MCP, resumo):
+-- 010: student_forms.spouse_name, marriage_date (cônjuge quando casado)
+-- 011: new_members_lessons.title2 (2 matérias por encontro)
+--      churches.nm_default_lessons (modelo de aulas pré-definido)
+--      scheduled_messages: person_id nullable, custom_message, lesson_id
+--        (lembrete direto do professor 1 dia antes da aula)
+-- ============================================================

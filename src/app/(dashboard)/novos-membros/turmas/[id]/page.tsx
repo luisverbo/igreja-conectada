@@ -14,6 +14,7 @@ import { EditClassDialog } from '@/components/novos-membros/edit-class-dialog'
 import { DeleteClassButton } from '@/components/novos-membros/delete-class-button'
 import { EnrollmentToggle } from '@/components/novos-membros/enrollment-toggle'
 import { FichaLinkButton } from '@/components/novos-membros/ficha-link-button'
+import { LessonsManager } from '@/components/novos-membros/lessons-manager'
 import { FileText } from 'lucide-react'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -169,10 +170,15 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
           })}
         </div>
 
-        {/* Attendance Sheet (interactive, auto-save) */}
-        {lessons && lessons.length > 0 && enrollments && enrollments.length > 0 && (
+        {/* Cronograma de aulas — datas, professores e cancelamentos */}
+        {lessons && lessons.length > 0 && (
+          <LessonsManager lessons={lessons} teachers={teachers || []} canManage={canManage} />
+        )}
+
+        {/* Attendance Sheet (interactive, auto-save) — ignora aulas canceladas */}
+        {lessons && lessons.filter(l => l.status !== 'cancelada').length > 0 && enrollments && enrollments.length > 0 && (
           <AttendanceSheet
-            lessons={lessons}
+            lessons={lessons.filter(l => l.status !== 'cancelada')}
             enrollments={enrollments}
             attendanceRecords={attendanceRecords || []}
             userId={profile?.id || ''}
