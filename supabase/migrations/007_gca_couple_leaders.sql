@@ -10,3 +10,7 @@
 ALTER TABLE discipleships
   ADD COLUMN IF NOT EXISTS leader2_id UUID REFERENCES profiles(id),
   ADD COLUMN IF NOT EXISTS leader2_name TEXT;
+
+-- Migration extra (geocode_cache) — aplicada junto:
+-- CREATE TABLE geocode_cache (query UNIQUE, latitude, longitude)
+-- Cache permanente de geocoding para o mapa dos relatórios.

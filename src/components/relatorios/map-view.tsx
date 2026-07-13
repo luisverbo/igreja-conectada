@@ -80,6 +80,7 @@ type Tab = 'novos' | 'membros' | 'celulas' | 'todos'
 
 export function MapView({ people, discipleships, novosGroups, membrosGroups }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('novos')
+  const [showPins, setShowPins] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { fixLeafletIcon(); setMounted(true) }, [])
@@ -117,6 +118,9 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
     : activeTab === 'todos' ? people
     : []
   const showCells = activeTab === 'celulas' || activeTab === 'todos'
+  // Bubbles are the primary view; individual pins are opt-in to avoid
+  // representing the same person twice on the map
+  const renderPins = activeTab === 'celulas' ? false : (showPins || activeGroups.length === 0)
 
   const hasCells = discipleships.length > 0
   const hasGroups = activeGroups.length > 0
@@ -140,7 +144,7 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         {tabs.map(t => (
           <button
             key={t.key}
@@ -150,6 +154,17 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
             {t.label}{t.count !== null ? ` (${t.count})` : ''}
           </button>
         ))}
+        {activeTab !== 'celulas' && (
+          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 cursor-pointer ml-auto">
+            <input
+              type="checkbox"
+              checked={showPins}
+              onChange={e => setShowPins(e.target.checked)}
+              className="h-3.5 w-3.5 accent-violet-600"
+            />
+            Marcadores individuais
+          </label>
+        )}
       </div>
 
       <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: '460px' }}>
@@ -174,7 +189,7 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
             )
           })}
 
-          {activePeople.map(p => (
+          {renderPins && activePeople.map(p => (
             <Marker key={`p-${p.id}`} position={[p.latitude, p.longitude]}>
               <Popup>
                 <div className="text-sm">

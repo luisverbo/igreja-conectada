@@ -41,6 +41,10 @@ const STATUS_VARIANT: Record<string, string> = {
 
 type FilterType = 'todos' | 'novos' | 'membros'
 
+// Composite key prevents merging same-named neighborhoods from different cities
+const keyOf = (x: { neighborhood: string | null; city: string | null }) =>
+  `${x.neighborhood || ''}|${x.city || ''}`
+
 export function NeighborhoodFilter({ people }: Props) {
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterType>('todos')
@@ -50,8 +54,8 @@ export function NeighborhoodFilter({ people }: Props) {
   const neighborhoods = useMemo(() => {
     const map: Record<string, { neighborhood: string; city: string | null; total: number; novos: number; membros: number }> = {}
     people.forEach(p => {
-      const key = p.neighborhood || p.city || ''
-      if (!key) return
+      const key = keyOf(p)
+      if (key === '|') return
       if (!map[key]) map[key] = { neighborhood: p.neighborhood || '', city: p.city, total: 0, novos: 0, membros: 0 }
       map[key].total++
       if (p.status === 'novo') map[key].novos++
@@ -71,19 +75,18 @@ export function NeighborhoodFilter({ people }: Props) {
   const selectedPeople = useMemo(() => {
     if (!selectedNeighborhood) return []
     return people.filter(p => {
-      const key = p.neighborhood || p.city || ''
-      if (key !== selectedNeighborhood) return false
+      if (keyOf(p) !== selectedNeighborhood) return false
       if (filter === 'novos') return p.status === 'novo'
       if (filter === 'membros') return p.status !== 'novo'
       return true
     })
   }, [people, selectedNeighborhood, filter])
 
-  const selectedInfo = neighborhoods.find(n => (n.neighborhood || n.city) === selectedNeighborhood)
+  const selectedInfo = neighborhoods.find(n => keyOf(n) === selectedNeighborhood)
 
   const filterCounts = useMemo(() => {
     if (!selectedNeighborhood) return { todos: 0, novos: 0, membros: 0 }
-    const inNeighborhood = people.filter(p => (p.neighborhood || p.city || '') === selectedNeighborhood)
+    const inNeighborhood = people.filter(p => keyOf(p) === selectedNeighborhood)
     return {
       todos: inNeighborhood.length,
       novos: inNeighborhood.filter(p => p.status === 'novo').length,
@@ -118,7 +121,7 @@ export function NeighborhoodFilter({ people }: Props) {
                 <p className="text-sm text-slate-400 text-center py-6">Nenhum bairro encontrado</p>
               )}
               {filteredNeighborhoods.map(n => {
-                const key = n.neighborhood || n.city || ''
+                const key = keyOf(n)
                 const isSelected = selectedNeighborhood === key
                 return (
                   <button
