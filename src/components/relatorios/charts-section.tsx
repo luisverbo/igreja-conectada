@@ -51,13 +51,11 @@ const STATUS_COLORS: Record<string, string> = {
 const GENDER_COLORS: Record<string, string> = {
   M: '#3b82f6',
   F: '#ec4899',
-  outro: '#94a3b8',
 }
 
 const GENDER_LABELS: Record<string, string> = {
   M: 'Masculino',
   F: 'Feminino',
-  outro: 'Outro',
 }
 
 const ORIGIN_COLORS: Record<string, string> = {

@@ -171,7 +171,6 @@ export default function NovaPessoaPage() {
                   <Select id="gender" value={form.gender} onChange={(e) => handleChange('gender', e.target.value)} placeholder="Selecione">
                     <option value="M">Masculino</option>
                     <option value="F">Feminino</option>
-                    <option value="outro">Outro</option>
                   </Select>
                 </div>
 

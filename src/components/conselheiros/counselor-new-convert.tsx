@@ -35,7 +35,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
     city: '',
     state: '',
     origin: '' as 'aceitou_jesus_aqui' | 'veio_de_outra_igreja' | '',
-    gender: '' as 'M' | 'F' | 'outro' | '',
+    gender: '' as 'M' | 'F' | '',
   })
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
 
