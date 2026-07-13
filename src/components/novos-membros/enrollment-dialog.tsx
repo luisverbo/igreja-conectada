@@ -41,10 +41,44 @@ export function EnrollmentDialog({ classId, churchId, userId }: Props) {
     setSearchResults(data?.filter(p => !selected.find(s => s.id === p.id)) || [])
   }
 
-  function addPerson(person: any) {
-    setSelected(prev => [...prev, person])
+  async function addPerson(person: any) {
     setSearchResults([])
     setSearchQuery('')
+    const supabase = createClient()
+
+    // Prior incomplete history: lessons this person attended in OTHER classes
+    // but never completed. Lets the leader credit or require a full redo.
+    const { data: priorEnrollments } = await supabase
+      .from('new_members_enrollments')
+      .select('id, completed, class_id, new_members_classes(name, status)')
+      .eq('person_id', person.id)
+      .neq('class_id', classId)
+
+    let priorAttended = 0
+    let priorClassName = ''
+    const incomplete = (priorEnrollments || []).filter((e: any) => !e.completed)
+    if (incomplete.length > 0) {
+      const ids = incomplete.map((e: any) => e.id)
+      const { data: att } = await supabase
+        .from('new_members_attendance')
+        .select('enrollment_id, present')
+        .in('enrollment_id', ids)
+        .eq('present', true)
+      priorAttended = att?.length || 0
+      priorClassName = (incomplete[0] as any).new_members_classes?.name || 'turma anterior'
+    }
+
+    // creditMode: 'none' (nothing prior) | 'credit' (reaproveitar) | 'redo' (refazer tudo)
+    setSelected(prev => [...prev, {
+      ...person,
+      priorAttended,
+      priorClassName,
+      creditMode: priorAttended > 0 ? 'credit' : 'none',
+    }])
+  }
+
+  function setCreditMode(id: string, mode: string) {
+    setSelected(prev => prev.map(p => p.id === id ? { ...p, creditMode: mode } : p))
   }
 
   async function handleEnroll() {
@@ -55,7 +89,14 @@ export function EnrollmentDialog({ classId, churchId, userId }: Props) {
     const { error: upsertError } = await supabase
       .from('new_members_enrollments')
       .upsert(
-        selected.map(p => ({ class_id: classId, person_id: p.id })),
+        selected.map(p => ({
+          class_id: classId,
+          person_id: p.id,
+          credited_lessons: p.creditMode === 'credit' ? (p.priorAttended || 0) : 0,
+          credit_note: p.creditMode === 'credit' && p.priorAttended > 0
+            ? `${p.priorAttended} aula(s) reaproveitada(s) de ${p.priorClassName}`
+            : (p.creditMode === 'redo' && p.priorAttended > 0 ? `Refazendo tudo (fez ${p.priorAttended} em ${p.priorClassName})` : null),
+        })),
         { onConflict: 'class_id,person_id' }
       )
 
@@ -134,15 +175,34 @@ export function EnrollmentDialog({ classId, churchId, userId }: Props) {
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Selecionados ({selected.length})</p>
                   {selected.map(p => (
-                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-3 py-2">
-                      <span className="text-sm font-medium text-violet-800">{p.full_name}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelected(prev => prev.filter(x => x.id !== p.id))}
-                        className="text-violet-400 hover:text-violet-700"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+                    <div key={p.id} className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-violet-800">{p.full_name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelected(prev => prev.filter(x => x.id !== p.id))}
+                          className="text-violet-400 hover:text-violet-700"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {p.priorAttended > 0 && (
+                        <div className="mt-2 rounded-lg bg-amber-50 border border-amber-200 p-2.5">
+                          <p className="text-xs text-amber-800 font-medium mb-1.5">
+                            ⚠️ Já fez <strong>{p.priorAttended} aula(s)</strong> em {p.priorClassName} (não concluiu). O que fazer?
+                          </p>
+                          <div className="flex gap-2">
+                            <label className="flex-1 flex items-center gap-1.5 rounded-md border border-amber-200 bg-white px-2 py-1.5 text-xs cursor-pointer">
+                              <input type="radio" name={`credit-${p.id}`} checked={p.creditMode === 'credit'} onChange={() => setCreditMode(p.id, 'credit')} className="accent-violet-600" />
+                              Reaproveitar ({p.priorAttended})
+                            </label>
+                            <label className="flex-1 flex items-center gap-1.5 rounded-md border border-amber-200 bg-white px-2 py-1.5 text-xs cursor-pointer">
+                              <input type="radio" name={`credit-${p.id}`} checked={p.creditMode === 'redo'} onChange={() => setCreditMode(p.id, 'redo')} className="accent-violet-600" />
+                              Refazer tudo
+                            </label>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -1,0 +1,13 @@
+-- ============================================================
+-- Migration 009: Ficha do aluno de Novos Membros + reaproveitamento
+-- (já aplicada via MCP em 2026-07-13)
+-- ============================================================
+-- student_forms: ficha completa preenchida pelo próprio aluno (ou
+-- por um voluntário para quem não sabe/não tem celular/é idoso).
+-- Aceite do estatuto substitui o antigo termo LGPD.
+-- Bucket 'student-photos' criado no storage para as fotos.
+--
+-- new_members_enrollments.credited_lessons + credit_note:
+-- reaproveitamento de aulas quando o aluno rematricula sem ter
+-- concluído a turma anterior.
+-- (SQL completo aplicado — ver Supabase)

@@ -13,6 +13,8 @@ import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
 import { EditClassDialog } from '@/components/novos-membros/edit-class-dialog'
 import { DeleteClassButton } from '@/components/novos-membros/delete-class-button'
 import { EnrollmentToggle } from '@/components/novos-membros/enrollment-toggle'
+import { FichaLinkButton } from '@/components/novos-membros/ficha-link-button'
+import { FileText } from 'lucide-react'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -39,14 +41,16 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
 
   // Attendance summary per person
   const enrollmentIds = enrollments?.map(e => e.id) || []
-  const { data: attendanceRecords } = await supabase
-    .from('new_members_attendance')
-    .select('*')
-    .in('enrollment_id', enrollmentIds)
+  const [{ data: attendanceRecords }, { data: fichas }] = await Promise.all([
+    supabase.from('new_members_attendance').select('*').in('enrollment_id', enrollmentIds),
+    supabase.from('student_forms').select('id, person_id, filled_by, filled_at').eq('class_id', id),
+  ])
+  const fichaByPerson: Record<string, { id: string; filled_by: string | null }> = {}
+  fichas?.forEach(f => { if (f.person_id) fichaByPerson[f.person_id] = { id: f.id, filled_by: f.filled_by } })
 
-  const presenceMap: Record<string, { present: number; total: number }> = {}
+  const presenceMap: Record<string, { present: number; total: number; credited: number }> = {}
   enrollments?.forEach(e => {
-    presenceMap[e.id] = { present: 0, total: lessons?.length || 0 }
+    presenceMap[e.id] = { present: e.credited_lessons || 0, total: lessons?.length || 0, credited: e.credited_lessons || 0 }
   })
   attendanceRecords?.forEach(a => {
     if (presenceMap[a.enrollment_id]) {
@@ -119,6 +123,9 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             {canManage && <EditClassDialog turma={turma} />}
             {turma.registration_token && turma.status === 'ativa' && turma.enrollment_open && (
               <CopyLinkButton token={turma.registration_token} />
+            )}
+            {turma.registration_token && (
+              <FichaLinkButton token={turma.registration_token} turmaName={turma.name} />
             )}
             {profile && canManage && turma.status === 'ativa' && (
               <EnrollmentDialog classId={id} churchId={profile.church_id} userId={profile.id} />
@@ -201,7 +208,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                 <TableRow>
                   <TableHead>Aluno</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead>Matrícula</TableHead>
+                  <TableHead>Ficha</TableHead>
                   <TableHead>Frequência</TableHead>
                   <TableHead>Concluído</TableHead>
                   <TableHead />
@@ -220,7 +227,20 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                           </Link>
                         </TableCell>
                         <TableCell className="text-sm text-slate-600">{e.people?.phone || '—'}</TableCell>
-                        <TableCell className="text-sm text-slate-500">{formatDate(e.enrolled_at)}</TableCell>
+                        <TableCell>
+                          {fichaByPerson[e.people?.id] ? (
+                            <Link
+                              href={`/novos-membros/fichas/${fichaByPerson[e.people.id].id}`}
+                              className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold hover:bg-emerald-200"
+                            >
+                              <FileText className="h-3 w-3" /> Ver ficha
+                            </Link>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-400 px-2 py-0.5 text-xs font-medium">
+                              Pendente
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="h-1.5 w-20 rounded-full bg-slate-100">
@@ -230,6 +250,9 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                               />
                             </div>
                             <span className="text-xs text-slate-600">{presence?.present || 0}/{presence?.total || 0}</span>
+                            {presence?.credited > 0 && (
+                              <span className="text-[10px] text-amber-600 font-semibold" title={e.credit_note || ''}>+{presence.credited} reap.</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
