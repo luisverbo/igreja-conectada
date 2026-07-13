@@ -41,12 +41,12 @@ export function EditClassDialog({ turma }: Props) {
     if (!open) return
     const supabase = createClient()
     supabase
-      .from('profiles')
-      .select('id, full_name')
+      .from('nm_teachers')
+      .select('id, name')
       .eq('church_id', turma.church_id)
-      .eq('is_active', true)
-      .order('full_name')
-      .then(({ data }) => setTeachers(data || []))
+      .eq('active', true)
+      .order('name')
+      .then(({ data }) => setTeachers((data || []).map((t: any) => ({ id: t.id, full_name: t.name }))))
   }, [open, turma.church_id])
 
   async function handleSubmit(e: React.FormEvent) {

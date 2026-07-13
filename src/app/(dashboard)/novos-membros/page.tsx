@@ -12,6 +12,7 @@ import { CopyLinkButton } from '@/components/novos-membros/copy-link-button'
 import { ChurchQrCard } from '@/components/novos-membros/church-qr-card'
 import { Clock } from 'lucide-react'
 import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
+import { TeachersSection } from '@/components/novos-membros/teachers-section'
 import { FULL_ACCESS } from '@/lib/roles'
 
 export default async function NovosMembrosPage() {
@@ -22,7 +23,7 @@ export default async function NovosMembrosPage() {
   const [{ data: classes }, { data: church }, { data: waitlist }] = await Promise.all([
     supabase
       .from('new_members_classes')
-      .select('*, registration_token, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)')
+      .select('*, registration_token, teacher:nm_teachers(name)')
       .eq('church_id', profile.church_id)
       .order('created_at', { ascending: false }),
     supabase
@@ -137,6 +138,11 @@ export default async function NovosMembrosPage() {
           />
         )}
 
+        {/* Professores das aulas (só nome + WhatsApp, sem login) */}
+        {[...FULL_ACCESS, 'new_members_leader', 'new_members_teacher'].includes(profile.role) && (
+          <TeachersSection churchId={profile.church_id} canEdit={[...FULL_ACCESS, 'new_members_leader', 'new_members_teacher'].includes(profile.role)} />
+        )}
+
         {/* Actions */}
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900">Turmas</h2>
@@ -169,12 +175,12 @@ export default async function NovosMembrosPage() {
                         {cls.location && <p className="text-xs text-slate-400">{cls.location}</p>}
                       </TableCell>
                       <TableCell>
-                        {cls.teacher?.full_name ? (
+                        {cls.teacher?.name ? (
                           <span className="inline-flex items-center gap-2">
                             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold flex-shrink-0">
-                              {cls.teacher.full_name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                              {cls.teacher.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
                             </span>
-                            <span className="text-sm font-medium text-slate-700">{cls.teacher.full_name}</span>
+                            <span className="text-sm font-medium text-slate-700">{cls.teacher.name}</span>
                           </span>
                         ) : (
                           <span className="text-sm text-slate-400">—</span>

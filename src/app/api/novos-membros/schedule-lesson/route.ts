@@ -47,14 +47,15 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: teacher } = await admin
-    .from('profiles')
-    .select('full_name, phone')
+    .from('nm_teachers')
+    .select('name, phone')
     .eq('id', lesson.teacher_id)
     .single()
 
   if (!teacher?.phone) {
     return NextResponse.json({ ok: true, scheduled: false, reason: 'professor sem telefone' })
   }
+  const teacherFullName = teacher.name
 
   // Envia às 18:00 (horário de Brasília ≈ 21:00 UTC) do dia anterior
   const lessonDay = new Date(`${lesson.lesson_date}T00:00:00-03:00`)
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   const hora = turma.time_start ? ` às ${String(turma.time_start).slice(0, 5)}` : ''
   const materias = [lesson.title, lesson.title2].filter(Boolean).join(' e ')
-  const firstName = (teacher.full_name || '').split(' ')[0]
+  const firstName = (teacherFullName || '').split(' ')[0]
   const message = `Olá, ${firstName}! 📚\n\nPassando para lembrar que *amanhã* você dá aula no Novos Membros (turma ${turma.name})${hora}.\n\n📖 Matéria: ${materias}\n\nDeus abençoe seu ministério! 💜`
 
   await admin.from('scheduled_messages').insert({

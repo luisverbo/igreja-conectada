@@ -35,12 +35,12 @@ export function NewClassDialog({ churchId, userId }: Props) {
     if (!open) return
     const supabase = createClient()
     supabase
-      .from('profiles')
-      .select('id, full_name')
+      .from('nm_teachers')
+      .select('id, name')
       .eq('church_id', churchId)
-      .eq('is_active', true)
-      .order('full_name')
-      .then(({ data }) => setTeachers(data || []))
+      .eq('active', true)
+      .order('name')
+      .then(({ data }) => setTeachers((data || []).map((t: any) => ({ id: t.id, full_name: t.name }))))
     // Modelo de aulas pré-definido da igreja
     supabase
       .from('churches')
@@ -70,7 +70,7 @@ export function NewClassDialog({ churchId, userId }: Props) {
       .insert({
         church_id: churchId,
         name: form.name.trim(),
-        teacher_id: lessonTeachers[0] || userId,
+        teacher_id: lessonTeachers[0] || null,
         start_date: form.start_date || null,
         day_of_week: form.day_of_week || null,
         time_start: form.time_start || null,

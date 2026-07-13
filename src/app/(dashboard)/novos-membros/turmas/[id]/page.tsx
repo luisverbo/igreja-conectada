@@ -27,18 +27,21 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     { data: enrollments },
     { data: teachers },
   ] = await Promise.all([
-    supabase.from('new_members_classes').select('*, registration_token, teacher:profiles!new_members_classes_teacher_id_fkey(full_name)').eq('id', id).single(),
+    supabase.from('new_members_classes').select('*, registration_token, teacher:nm_teachers(name)').eq('id', id).single(),
     supabase.from('new_members_lessons').select('*').eq('class_id', id).order('lesson_number'),
     supabase.from('new_members_enrollments')
       .select('*, people(id, full_name, phone, status)')
       .eq('class_id', id)
       .order('enrolled_at'),
     profile?.church_id
-      ? supabase.from('profiles').select('id, full_name').eq('church_id', profile.church_id).eq('is_active', true).order('full_name')
-      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+      ? supabase.from('nm_teachers').select('id, name').eq('church_id', profile.church_id).eq('active', true).order('name')
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ])
 
   if (!turma) notFound()
+
+  // Componentes esperam { id, full_name } — mapeia name → full_name
+  const teacherList = (teachers || []).map((t: any) => ({ id: t.id, full_name: t.name }))
 
   // Attendance summary per person
   const enrollmentIds = enrollments?.map(e => e.id) || []
@@ -66,7 +69,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
   }
 
   const canManage = !!profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher'].includes(profile.role)
-  const teacherName = turma.teacher?.full_name
+  const teacherName = turma.teacher?.name
 
   return (
     <div>
@@ -172,7 +175,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
 
         {/* Cronograma de aulas — datas, professores e cancelamentos */}
         {lessons && lessons.length > 0 && (
-          <LessonsManager lessons={lessons} teachers={teachers || []} canManage={canManage} />
+          <LessonsManager lessons={lessons} teachers={teacherList} canManage={canManage} />
         )}
 
         {/* Attendance Sheet (interactive, auto-save) — ignora aulas canceladas */}
@@ -183,7 +186,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
             attendanceRecords={attendanceRecords || []}
             userId={profile?.id || ''}
             canManage={canManage}
-            teachers={teachers || []}
+            teachers={teacherList}
             turmaId={id}
             closeAfterLesson={turma.close_after_lesson}
             enrollmentOpen={turma.enrollment_open ?? true}
