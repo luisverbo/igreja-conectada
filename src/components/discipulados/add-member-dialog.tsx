@@ -97,12 +97,9 @@ export function AddMemberDialog({ discipleshipId, churchId, userId, userRole }: 
   }
 
   function add(person: any) {
-    if (needsAuth(person) && !isAuthorized) {
-      setBlockedMsg(
-        `${person.full_name} ainda não concluiu os Novos Membros. Apenas o supervisor de GCA ou o pastor pode adicioná-la.`
-      )
-      return
-    }
+    // Líder NÃO é mais bloqueado — se a pessoa não concluiu NM (ou já está em
+    // outro GCA), a inclusão/transferência vira solicitação ao supervisor,
+    // tratada no servidor. O item selecionado mostra o aviso em âmbar.
     setBlockedMsg(null)
     setSelected(prev => [...prev, person])
     setSearchResults([])
@@ -181,30 +178,42 @@ export function AddMemberDialog({ discipleshipId, churchId, userId, userRole }: 
     setSearched(false)
   }
 
+  const [resultMsg, setResultMsg] = useState<string | null>(null)
+
   async function handleAdd() {
     setLoading(true)
-    const supabase = createClient()
+    setResultMsg(null)
 
-    await supabase.from('discipleship_members').upsert(
-      selected.map(p => ({ discipleship_id: discipleshipId, person_id: p.id, status: 'ativo' })),
-      { onConflict: 'discipleship_id,person_id' }
-    )
-
+    // Usa a API de encaminhamento — aplica as regras de negócio no servidor:
+    // concluiu NM entra direto; sem NM → gestor autoriza / líder solicita;
+    // já em outro GCA → gestor transfere / líder solicita transferência.
+    let added = 0, requested = 0, errors = 0
+    const errorMsgs: string[] = []
     for (const p of selected) {
-      await supabase.from('people').update({ status: 'em_discipulado' }).eq('id', p.id)
-      await supabase.from('journey_events').insert({
-        person_id: p.id,
-        event_type: 'entrou_discipulado',
-        reference_id: discipleshipId,
-        reference_type: 'discipulado',
-        recorded_by: userId,
-        ...(needsAuth(p) ? { description: `Autorizado por ${userRole.replace(/_/g, ' ')} — pessoa sem NM concluído` } : {}),
+      const res = await fetch('/api/gca/encaminhar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personId: p.id, targetDiscipleshipId: discipleshipId }),
       })
+      const data = await res.json()
+      if (!res.ok) { errors++; errorMsgs.push(`${p.full_name}: ${data.error || 'erro'}`); continue }
+      if (String(data.result).startsWith('solicitacao')) requested++
+      else added++
     }
 
     setLoading(false)
-    close()
-    router.refresh()
+
+    if (errors > 0 && added === 0 && requested === 0) {
+      setResultMsg(errorMsgs[0])
+      return
+    }
+
+    const parts: string[] = []
+    if (added > 0) parts.push(`${added} adicionado(s)`)
+    if (requested > 0) parts.push(`${requested} solicitação(ões) enviada(s) ao supervisor`)
+    if (errors > 0) parts.push(`${errors} com erro`)
+    setResultMsg(parts.join(' · '))
+    setTimeout(() => { close(); router.refresh() }, 1600)
   }
 
   const hasUnauthorized = selected.some(needsAuth)
@@ -419,15 +428,22 @@ export function AddMemberDialog({ discipleshipId, churchId, userId, userRole }: 
                   </div>
                 ))}
 
-                {hasUnauthorized && isAuthorized && (
+                {hasUnauthorized && (
                   <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800">
                     <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
                     <span>
-                      Uma ou mais pessoas ainda não concluíram os Novos Membros.
-                      Ao confirmar, você está autorizando a inclusão como <strong>{userRole.replace(/_/g, ' ')}</strong>.
+                      {isAuthorized
+                        ? <>Uma ou mais pessoas ainda não concluíram os Novos Membros. Ao confirmar, você autoriza a inclusão como <strong>{userRole.replace(/_/g, ' ')}</strong>.</>
+                        : <>Uma ou mais pessoas ainda não concluíram os Novos Membros. Ao confirmar, será enviada uma <strong>solicitação ao supervisor</strong> para aprovar.</>}
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {resultMsg && (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-sm text-emerald-700">
+                {resultMsg}
               </div>
             )}
           </div>
@@ -435,7 +451,7 @@ export function AddMemberDialog({ discipleshipId, churchId, userId, userRole }: 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={close}>Cancelar</Button>
             <Button onClick={handleAdd} disabled={loading || selected.length === 0}>
-              {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Adicionando...</> : `Adicionar${selected.length > 0 ? ` (${selected.length})` : ''}`}
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Processando...</> : `Adicionar${selected.length > 0 ? ` (${selected.length})` : ''}`}
             </Button>
           </DialogFooter>
         </DialogContent>

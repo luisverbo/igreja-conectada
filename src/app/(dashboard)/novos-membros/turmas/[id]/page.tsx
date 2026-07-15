@@ -15,6 +15,7 @@ import { DeleteClassButton } from '@/components/novos-membros/delete-class-butto
 import { EnrollmentToggle } from '@/components/novos-membros/enrollment-toggle'
 import { FichaLinkButton } from '@/components/novos-membros/ficha-link-button'
 import { LessonsManager } from '@/components/novos-membros/lessons-manager'
+import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { FileText } from 'lucide-react'
 
 export default async function TurmaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +31,7 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
     supabase.from('new_members_classes').select('*, registration_token, teacher:nm_teachers(name)').eq('id', id).single(),
     supabase.from('new_members_lessons').select('*').eq('class_id', id).order('lesson_number'),
     supabase.from('new_members_enrollments')
-      .select('*, people(id, full_name, phone, status)')
+      .select('*, people(id, full_name, phone, status, latitude, longitude)')
       .eq('class_id', id)
       .order('enrolled_at'),
     profile?.church_id
@@ -272,13 +273,26 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
                           />
                         </TableCell>
                         <TableCell>
-                          {turma.status === 'ativa' && (
-                            <RemoveEnrollmentButton
-                              enrollmentId={e.id}
-                              personId={e.people?.id}
-                              personName={e.people?.full_name}
-                            />
-                          )}
+                          <div className="flex items-center gap-2">
+                            {e.completed && profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'new_members_leader'].includes(profile.role) && (
+                              <EncaminharDialog
+                                personId={e.people?.id}
+                                personName={e.people?.full_name}
+                                personLat={e.people?.latitude ?? null}
+                                personLng={e.people?.longitude ?? null}
+                                churchId={profile.church_id}
+                                trigger="link"
+                                label="→ GCA"
+                              />
+                            )}
+                            {turma.status === 'ativa' && (
+                              <RemoveEnrollmentButton
+                                enrollmentId={e.id}
+                                personId={e.people?.id}
+                                personName={e.people?.full_name}
+                              />
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )

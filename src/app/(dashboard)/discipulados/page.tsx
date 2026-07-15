@@ -9,7 +9,11 @@ import Link from 'next/link'
 import { NewDiscipleshipDialog } from '@/components/discipulados/new-discipleship-dialog'
 import { LocationsSection } from '@/components/discipulados/locations-section'
 import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
+import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
+import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
+import { GraduationCap, ArrowRightLeft, Inbox } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
 
 export default async function DiscipuladosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -31,6 +35,29 @@ export default async function DiscipuladosPage() {
   }
 
   const { data: discipleships } = await gcaQuery
+
+  // Caixa de encaminhamentos (só gestão): concluintes de NM aguardando GCA
+  // + solicitações pendentes de inclusão/transferência
+  let concluintes: any[] = []
+  let pendingRequests: any[] = []
+  if (canManageDept) {
+    const [{ data: conc }, { data: reqs }] = await Promise.all([
+      supabase
+        .from('people')
+        .select('id, full_name, phone, latitude, longitude, neighborhood, city')
+        .eq('church_id', profile.church_id)
+        .eq('status', 'concluiu_novos_membros')
+        .order('full_name'),
+      supabase
+        .from('gca_requests')
+        .select('id, request_type, reason, created_at, person:people(id, full_name), target:discipleships!gca_requests_target_discipleship_id_fkey(name), from:discipleships!gca_requests_from_discipleship_id_fkey(name), requester:profiles!gca_requests_requested_by_fkey(full_name)')
+        .eq('church_id', profile.church_id)
+        .eq('status', 'pendente')
+        .order('created_at'),
+    ])
+    concluintes = conc || []
+    pendingRequests = reqs || []
+  }
 
   // Member counts
   const ids = discipleships?.map(d => d.id) || []
@@ -71,6 +98,70 @@ export default async function DiscipuladosPage() {
             <p className="text-sm text-violet-600">Os GCAs registram observações e status espiritual. Não há controle de presença ou faltas.</p>
           </div>
         </div>
+
+        {/* Caixa de Encaminhamentos (gestão) */}
+        {canManageDept && (pendingRequests.length > 0 || concluintes.length > 0) && (
+          <div className="rounded-2xl border border-violet-200 bg-white overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2 bg-violet-50/50">
+              <Inbox className="h-4 w-4 text-violet-600" />
+              <h2 className="text-base font-bold text-slate-900">Caixa de Encaminhamentos</h2>
+            </div>
+
+            {/* Solicitações pendentes */}
+            {pendingRequests.length > 0 && (
+              <div className="px-5 py-4 border-b border-slate-100">
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <ArrowRightLeft className="h-3.5 w-3.5" /> Solicitações aguardando sua aprovação ({pendingRequests.length})
+                </p>
+                <div className="space-y-2">
+                  {pendingRequests.map((r: any) => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{r.person?.full_name}</p>
+                        <p className="text-xs text-slate-600">
+                          {r.request_type === 'transferencia'
+                            ? <>🔄 Transferir de <strong>{r.from?.name || '—'}</strong> para <strong>{r.target?.name}</strong></>
+                            : <>➕ Incluir no <strong>{r.target?.name}</strong> (sem NM concluído)</>}
+                          {r.requester?.full_name && <span className="text-slate-400"> · por {r.requester.full_name}</span>}
+                        </p>
+                        {r.reason && <p className="text-xs text-slate-400 italic mt-0.5">&ldquo;{r.reason}&rdquo;</p>}
+                      </div>
+                      <RequestActions requestId={r.id} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Concluintes de NM aguardando GCA */}
+            {concluintes.length > 0 && (
+              <div className="px-5 py-4">
+                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <GraduationCap className="h-3.5 w-3.5" /> Concluíram Novos Membros — aguardando GCA ({concluintes.length})
+                </p>
+                <div className="space-y-2">
+                  {concluintes.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <Link href={`/pessoas/${c.id}`} className="text-sm font-semibold text-slate-900 hover:text-violet-600 truncate block">{c.full_name}</Link>
+                        <p className="text-xs text-slate-400">{[c.neighborhood, c.city].filter(Boolean).join(', ') || 'sem endereço'}</p>
+                      </div>
+                      <EncaminharDialog
+                        personId={c.id}
+                        personName={c.full_name}
+                        personLat={c.latitude}
+                        personLng={c.longitude}
+                        churchId={profile.church_id}
+                        trigger="link"
+                        label="Encaminhar"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

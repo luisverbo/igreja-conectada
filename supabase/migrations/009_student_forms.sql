@@ -20,3 +20,6 @@
 --      scheduled_messages: person_id nullable, custom_message, lesson_id
 --        (lembrete direto do professor 1 dia antes da aula)
 -- ============================================================
+-- 012: nm_teachers (professor só nome+WhatsApp, FK repointada)
+-- 013: gca_requests (solicitações de inclusão/transferência) +
+--      policy UPDATE em discipleship_observations (corrige edição)

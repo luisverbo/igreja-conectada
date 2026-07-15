@@ -12,6 +12,7 @@ import { AddMemberDialog } from '@/components/discipulados/add-member-dialog'
 import { ObservationDialog } from '@/components/discipulados/observation-dialog'
 import { EditDiscipleshipDialog } from '@/components/discipulados/edit-discipleship-dialog'
 import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
+import { ObservationEditButton } from '@/components/discipulados/observation-edit-button'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
   ativo: 'success',
@@ -202,6 +203,13 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                               </div>
                               {latestObs.profiles?.full_name && (
                                 <p className="text-xs text-slate-400 mt-1">por {latestObs.profiles.full_name}</p>
+                              )}
+                              {profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader'].includes(profile.role) && (
+                                <ObservationEditButton
+                                  observationId={latestObs.id}
+                                  currentText={latestObs.description || ''}
+                                  needsCare={!!latestObs.needs_care}
+                                />
                               )}
                               {hasObs && member.discipleship_observations.length > 1 && (
                                 <p className="text-xs text-violet-500 mt-1">+{member.discipleship_observations.length - 1} observações anteriores</p>
