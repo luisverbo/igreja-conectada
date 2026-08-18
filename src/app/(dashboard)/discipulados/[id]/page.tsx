@@ -13,6 +13,7 @@ import { ObservationDialog } from '@/components/discipulados/observation-dialog'
 import { EditDiscipleshipDialog } from '@/components/discipulados/edit-discipleship-dialog'
 import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
 import { ObservationEditButton } from '@/components/discipulados/observation-edit-button'
+import { GcaSurveysCard } from '@/components/gca/gca-surveys-card'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
   ativo: 'success',
@@ -30,6 +31,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
   const [
     { data: discipleship },
     { data: members },
+    { data: gcaSurveys },
   ] = await Promise.all([
     supabase.from('discipleships')
       .select('*, leader:profiles!discipleships_leader_id_fkey(full_name, phone), leader2:profiles!discipleships_leader2_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name, host_phone, address, neighborhood, city)')
@@ -41,9 +43,30 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
       .order('status')
       .order('created_at')
       .order('observation_date', { referencedTable: 'discipleship_observations', ascending: false }),
+    // Pesquisas vinculadas a ESTE GCA (link exclusivo do grupo)
+    supabase.from('survey_targets')
+      .select('token, survey:surveys!inner(id, title, description, audience, active)')
+      .eq('discipleship_id', id)
+      .eq('surveys.active', true),
   ])
 
   if (!discipleship) notFound()
+
+  // Contagem de respostas por pesquisa deste GCA
+  const surveyIds = (gcaSurveys || []).map((t: any) => t.survey?.id).filter(Boolean)
+  const { data: surveyResponseRows } = surveyIds.length
+    ? await supabase.from('survey_responses').select('survey_id').eq('discipleship_id', id).in('survey_id', surveyIds)
+    : { data: [] as { survey_id: string }[] }
+  const respCount: Record<string, number> = {}
+  surveyResponseRows?.forEach(r => { respCount[r.survey_id] = (respCount[r.survey_id] || 0) + 1 })
+
+  const surveyList = (gcaSurveys || []).map((t: any) => ({
+    token: t.token,
+    title: t.survey?.title || '',
+    description: t.survey?.description ?? null,
+    audience: t.survey?.audience,
+    responses: respCount[t.survey?.id] || 0,
+  }))
 
   // Quem não é gestão do departamento só acessa GCAs que lidera/supervisiona
   const seesAll = !!profile && [...FULL_ACCESS, 'discipleship_supervisor', 'viewer'].includes(profile.role)
@@ -160,6 +183,9 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
             )
           })}
         </div>
+
+        {/* Pesquisas vinculadas a este GCA */}
+        <GcaSurveysCard surveys={surveyList} />
 
         {/* Members list with pastoral care */}
         <div className="space-y-3">

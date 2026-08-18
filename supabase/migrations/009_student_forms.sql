@@ -23,3 +23,4 @@
 -- 012: nm_teachers (professor só nome+WhatsApp, FK repointada)
 -- 013: gca_requests (solicitações de inclusão/transferência) +
 --      policy UPDATE em discipleship_observations (corrige edição)
+-- 014: surveys, survey_targets, survey_responses (pesquisas dos GCAs)

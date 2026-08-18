@@ -12,7 +12,7 @@ import { DepartmentTeamCard } from '@/components/configuracoes/department-team-c
 import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
-import { GraduationCap, ArrowRightLeft, Inbox } from 'lucide-react'
+import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 export default async function DiscipuladosPage() {
@@ -206,9 +206,19 @@ export default async function DiscipuladosPage() {
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-base font-semibold text-slate-900">GCAs</h2>
-          {canManageDept && <NewDiscipleshipDialog churchId={profile.church_id} userId={profile.id} />}
+          <div className="flex items-center gap-2">
+            {canManageDept && (
+              <Link
+                href="/discipulados/pesquisas"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <ClipboardList className="h-4 w-4" /> Pesquisas
+              </Link>
+            )}
+            {canManageDept && <NewDiscipleshipDialog churchId={profile.church_id} userId={profile.id} />}
+          </div>
         </div>
 
         {/* Table */}

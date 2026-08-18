@@ -31,6 +31,7 @@ export async function proxy(request: NextRequest) {
     || pathname.startsWith('/setup')
     || pathname.startsWith('/inscricao')
     || pathname.startsWith('/ficha')
+    || pathname.startsWith('/pesquisa')
     || pathname.startsWith('/redefinir-senha')
     || pathname === '/'
 
