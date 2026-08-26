@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Loader2, X, MapPin, Church, HomeIcon, Pencil } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, MapPin, Church, HomeIcon, Pencil, ExternalLink, Search, Check, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -28,7 +28,62 @@ export function LocationsSection({ churchId, canEdit }: Props) {
     notes: '',
   })
 
-  function set(k: string, v: string) { setForm(p => ({ ...p, [k]: v })) }
+  // Conferência do endereço antes de salvar
+  type Verify =
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'found'; label: string; lat: number; lng: number }
+    | { status: 'notfound' }
+    | { status: 'confirmed'; label: string; lat: number; lng: number }
+  const [verify, setVerify] = useState<Verify>({ status: 'idle' })
+
+  const ADDRESS_FIELDS = ['address', 'neighborhood', 'city', 'state']
+
+  function set(k: string, v: string) {
+    setForm(p => ({ ...p, [k]: v }))
+    // Mexeu no endereço? A conferência anterior não vale mais.
+    if (ADDRESS_FIELDS.includes(k)) setVerify({ status: 'idle' })
+  }
+
+  function addressQuery() {
+    return [form.address, form.neighborhood, form.city, form.state, 'Brasil']
+      .map(s => (s || '').trim())
+      .filter(Boolean)
+      .join(', ')
+  }
+
+  const canVerify = !!form.address.trim() && !!form.city.trim()
+
+  /** Link do Google Maps: usa as coordenadas quando já conferidas, senão busca pelo texto. */
+  function mapsUrl() {
+    const v = verify.status === 'found' || verify.status === 'confirmed' ? verify : null
+    const query = v ? `${v.lat},${v.lng}` : addressQuery()
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+  }
+
+  async function runVerify() {
+    if (!canVerify) return
+    setVerify({ status: 'loading' })
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressQuery())}&format=json&addressdetails=1&limit=1`,
+        { headers: { 'User-Agent': 'IgrejaConectada/1.0' } }
+      )
+      const geo = await res.json()
+      if (Array.isArray(geo) && geo.length > 0) {
+        setVerify({
+          status: 'found',
+          label: geo[0].display_name as string,
+          lat: parseFloat(geo[0].lat),
+          lng: parseFloat(geo[0].lon),
+        })
+      } else {
+        setVerify({ status: 'notfound' })
+      }
+    } catch {
+      setVerify({ status: 'notfound' })
+    }
+  }
 
   const emptyForm = {
     name: '', location_type: 'casa', host_name: '', host_phone: '',
@@ -39,6 +94,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
     setEditingId(null)
     setForm(emptyForm)
     setError(null)
+    setVerify({ status: 'idle' })
     setOpen(true)
   }
 
@@ -56,6 +112,11 @@ export function LocationsSection({ churchId, canEdit }: Props) {
       notes: loc.notes || '',
     })
     setError(null)
+    setVerify(
+      loc.latitude != null && loc.longitude != null
+        ? { status: 'confirmed', label: 'Coordenadas já salvas neste local', lat: loc.latitude, lng: loc.longitude }
+        : { status: 'idle' }
+    )
     setOpen(true)
   }
 
@@ -83,10 +144,14 @@ export function LocationsSection({ churchId, canEdit }: Props) {
       || (current.city || '') !== form.city
       || (current.neighborhood || '') !== form.neighborhood
 
-    // Geocode when there's an address (e só quando ele muda, na edição)
+    // Se o usuário já conferiu o endereço no mapa, usamos aquelas coordenadas.
     let latitude: number | null = null
     let longitude: number | null = null
-    if (addressChanged && form.address && form.city) {
+    const checked = verify.status === 'found' || verify.status === 'confirmed' ? verify : null
+    if (checked) {
+      latitude = checked.lat
+      longitude = checked.lng
+    } else if (addressChanged && form.address && form.city) {
       try {
         const query = encodeURIComponent(`${form.address}, ${form.neighborhood || ''} ${form.city} Brasil`)
         const res = await fetch(
@@ -112,7 +177,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
       city: form.city.trim() || null,
       state: form.state.trim() || null,
       notes: form.notes.trim() || null,
-      ...(addressChanged ? { latitude, longitude } : {}),
+      ...(addressChanged || latitude != null ? { latitude, longitude } : {}),
     }
 
     const { error: saveError } = editingId
@@ -132,7 +197,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
         address: form.address.trim() || null,
         neighborhood: form.neighborhood.trim() || null,
         city: form.city.trim() || null,
-        ...(addressChanged ? { latitude, longitude } : {}),
+        ...(addressChanged || latitude != null ? { latitude, longitude } : {}),
       }).eq('location_id', editingId)
     }
 
@@ -300,6 +365,82 @@ export function LocationsSection({ churchId, canEdit }: Props) {
                   <label className={labelClass}>UF</label>
                   <input type="text" maxLength={2} value={form.state} onChange={e => set('state', e.target.value.toUpperCase())} className={inputClass} />
                 </div>
+              </div>
+
+              {/* Conferir o endereço antes de salvar — é ele que posiciona
+                  o GCA no mapa e define o "GCA mais próximo" */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-violet-600" /> Conferir endereço
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={runVerify}
+                      disabled={!canVerify || verify.status === 'loading'}
+                      className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-40"
+                    >
+                      {verify.status === 'loading'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Search className="h-3.5 w-3.5" />}
+                      Localizar
+                    </button>
+                    <a
+                      href={canVerify ? mapsUrl() : undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled={!canVerify}
+                      onClick={e => { if (!canVerify) e.preventDefault() }}
+                      className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
+                        canVerify ? 'bg-violet-600 text-white hover:bg-violet-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Google Maps
+                    </a>
+                  </div>
+                </div>
+
+                {!canVerify && (
+                  <p className="text-[11px] text-slate-400 mt-2">Preencha Endereço e Cidade para conferir no mapa.</p>
+                )}
+
+                {verify.status === 'found' && (
+                  <div className="mt-2.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                    <p className="text-[11px] font-semibold text-amber-800">Encontramos este endereço — é esse mesmo?</p>
+                    <p className="text-xs text-slate-700 mt-1">{verify.label}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setVerify({ status: 'confirmed', label: verify.label, lat: verify.lat, lng: verify.lng })}
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
+                        <Check className="h-3.5 w-3.5" /> É esse
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVerify({ status: 'idle' })}
+                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        Não é — corrigir
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {verify.status === 'confirmed' && (
+                  <p className="mt-2 text-[11px] text-emerald-700 flex items-start gap-1">
+                    <Check className="h-3.5 w-3.5 flex-shrink-0 mt-px" />
+                    <span>Endereço confirmado no mapa · {verify.lat.toFixed(5)}, {verify.lng.toFixed(5)}</span>
+                  </p>
+                )}
+
+                {verify.status === 'notfound' && (
+                  <p className="mt-2 text-[11px] text-amber-700 flex items-start gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-px" />
+                    <span>Não localizamos no mapa. Confira no Google Maps e ajuste o endereço — dá para salvar assim mesmo, mas o local não aparecerá no mapa.</span>
+                  </p>
+                )}
               </div>
 
               <div>
