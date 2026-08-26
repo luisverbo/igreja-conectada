@@ -56,7 +56,23 @@ function makeCellIcon(leaderName: string | null) {
 }
 
 interface PersonMarker { id: string; full_name: string; status: string; neighborhood: string | null; latitude: number; longitude: number }
-interface DiscipleshipMarker { id: string; name: string; leader_name: string | null; day_of_week: string | null; latitude: number; longitude: number }
+export interface DiscipleshipMarker {
+  id: string
+  name: string
+  leader_name: string | null
+  supervisor_name: string | null
+  host_name: string | null
+  host_phone: string | null
+  location_name: string | null
+  location_type: string | null
+  address: string | null
+  day_of_week: string | null
+  time_start: string | null
+  meeting_frequency: string | null
+  member_count: number
+  latitude: number
+  longitude: number
+}
 interface NeighborhoodGroup { neighborhood: string; city: string; count: number; lat: number; lng: number }
 
 interface Props {
@@ -203,11 +219,43 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
 
           {showCells && discipleships.map(d => (
             <Marker key={`d-${d.id}`} position={[d.latitude, d.longitude]} icon={makeCellIcon(d.leader_name)}>
-              <Popup>
-                <div className="text-sm">
-                  <p className="font-semibold">{d.name}</p>
-                  {d.leader_name && <p className="text-slate-600">Líder: {d.leader_name}</p>}
-                  {d.day_of_week && <p className="text-slate-500">{DAY_LABELS[d.day_of_week] || d.day_of_week}</p>}
+              <Popup maxWidth={280}>
+                <div className="text-sm space-y-1" style={{ minWidth: 200 }}>
+                  <p className="font-bold text-violet-800 text-base leading-tight">🏠 {d.name}</p>
+
+                  {d.leader_name && (
+                    <p className="text-slate-700">
+                      {d.leader_name.includes('&') ? '👫 Líderes' : '👤 Líder'}: <strong>{d.leader_name}</strong>
+                    </p>
+                  )}
+                  {d.supervisor_name && <p className="text-slate-600">🧭 Supervisor: {d.supervisor_name}</p>}
+
+                  {(d.host_name || d.location_name) && (
+                    <p className="text-slate-700">
+                      {d.location_type === 'igreja' ? '⛪' : '🤝'}{' '}
+                      {d.host_name
+                        ? <>Anfitrião: <strong>{d.host_name}</strong>{d.host_phone ? ` · ${d.host_phone}` : ''}</>
+                        : d.location_name}
+                    </p>
+                  )}
+
+                  {d.address && <p className="text-slate-500">📍 {d.address}</p>}
+
+                  {(d.day_of_week || d.time_start) && (
+                    <p className="text-slate-600">
+                      🗓 {[DAY_LABELS[d.day_of_week || ''] || d.day_of_week, d.time_start].filter(Boolean).join(' · ')}
+                      {d.meeting_frequency && d.meeting_frequency !== 'semanal' && ` (${d.meeting_frequency})`}
+                    </p>
+                  )}
+
+                  <p className="text-slate-600">👥 {d.member_count} {d.member_count === 1 ? 'membro' : 'membros'}</p>
+
+                  <a
+                    href={`/discipulados/${d.id}`}
+                    className="inline-block mt-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold !text-white no-underline hover:bg-violet-700"
+                  >
+                    Abrir GCA →
+                  </a>
                 </div>
               </Popup>
             </Marker>

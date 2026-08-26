@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Map } from 'lucide-react'
+import type { DiscipleshipMarker } from './map-view'
 
 const MapView = dynamic(
   () => import('./map-view').then(mod => mod.MapView),
@@ -21,15 +22,6 @@ interface PersonMarker {
   full_name: string
   status: string
   neighborhood: string | null
-  latitude: number
-  longitude: number
-}
-
-interface DiscipleshipMarker {
-  id: string
-  name: string
-  leader_name: string | null
-  day_of_week: string | null
   latitude: number
   longitude: number
 }

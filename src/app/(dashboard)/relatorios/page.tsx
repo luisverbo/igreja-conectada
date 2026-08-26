@@ -43,7 +43,7 @@ export default async function RelatoriosPage() {
       .limit(24),
     supabase
       .from('discipleships')
-      .select('id, name, status, day_of_week, latitude, longitude, leader_name, leader2_name, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name)')
+      .select('id, name, status, day_of_week, time_start, meeting_frequency, address, neighborhood, city, latitude, longitude, leader_name, leader2_name, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name, host_phone)')
       .eq('church_id', cid),
     supabase
       .from('discipleship_members')
@@ -292,15 +292,29 @@ export default async function RelatoriosPage() {
       longitude: p.longitude as number,
     }))
 
-  // Só células ATIVAS no mapa, com nome do casal de líderes
+  // Só células ATIVAS no mapa, com o card completo no clique
+  const gcaMemberCount: Record<string, number> = {}
+  discipleshipMembers?.forEach((m: any) => {
+    if (m.status !== 'inativo') gcaMemberCount[m.discipleship_id] = (gcaMemberCount[m.discipleship_id] || 0) + 1
+  })
+
   const discipleshipMarkers = (discipleships || [])
     .filter(d => d.status === 'ativo' && d.latitude != null && d.longitude != null)
-    .map(d => {
+    .map((d: any) => {
       return {
         id: d.id,
         name: d.name,
-        leader_name: leadersShort(d as any),
+        leader_name: leadersShort(d),
+        supervisor_name: d.supervisor?.full_name ?? null,
+        host_name: d.location?.host_name ?? null,
+        host_phone: d.location?.host_phone ?? null,
+        location_name: d.location?.name ?? null,
+        location_type: d.location?.location_type ?? null,
+        address: [d.address, d.neighborhood, d.city].filter(Boolean).join(', ') || null,
         day_of_week: d.day_of_week ?? null,
+        time_start: d.time_start ? String(d.time_start).slice(0, 5) : null,
+        meeting_frequency: d.meeting_frequency ?? null,
+        member_count: gcaMemberCount[d.id] || 0,
         latitude: d.latitude as number,
         longitude: d.longitude as number,
       }
