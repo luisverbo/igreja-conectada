@@ -120,6 +120,11 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
                 <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione" required>
                   {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
                 </Select>
+                {leaders.length === 0 && (
+                  <p className="text-xs text-amber-600">
+                    Nenhum líder cadastrado — cadastre primeiro em &ldquo;Equipe de GCA&rdquo; (botão Adicionar) na página anterior.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -11,6 +11,7 @@ import { LocationsSection } from '@/components/discipulados/locations-section'
 import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
 import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
+import { GcaSetupGuide } from '@/components/discipulados/setup-guide'
 import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
 import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
@@ -36,6 +37,21 @@ export default async function DiscipuladosPage() {
   }
 
   const { data: discipleships } = await gcaQuery
+
+  // Contagens para o guia de primeiros passos
+  let locationCount = 0
+  let leaderCount = 0
+  if (canManageDept) {
+    const [{ count: locs }, { count: leaders }] = await Promise.all([
+      supabase.from('gca_locations').select('id', { count: 'exact', head: true })
+        .eq('church_id', profile.church_id).eq('active', true),
+      supabase.from('profiles').select('id', { count: 'exact', head: true })
+        .eq('church_id', profile.church_id).eq('is_active', true)
+        .in('role', ['discipleship_leader', 'discipleship_supervisor']),
+    ])
+    locationCount = locs || 0
+    leaderCount = leaders || 0
+  }
 
   // Caixa de encaminhamentos (só gestão): concluintes de NM aguardando GCA
   // + solicitações pendentes de inclusão/transferência
@@ -99,6 +115,15 @@ export default async function DiscipuladosPage() {
             <p className="text-sm text-violet-600">Os GCAs registram observações e status espiritual. Não há controle de presença ou faltas.</p>
           </div>
         </div>
+
+        {/* Guia de primeiros passos */}
+        {canManageDept && (
+          <GcaSetupGuide
+            locationCount={locationCount}
+            leaderCount={leaderCount}
+            gcaCount={discipleships?.length || 0}
+          />
+        )}
 
         {/* Caixa de Encaminhamentos (gestão) */}
         {canManageDept && (pendingRequests.length > 0 || concluintes.length > 0) && (
@@ -196,7 +221,7 @@ export default async function DiscipuladosPage() {
               churchId={profile.church_id}
               currentUserId={profile.id}
               title="Equipe de GCA"
-              description="Supervisores e líderes de GCA. Ao criar um GCA, você vincula o líder a um local."
+              description="Cadastre aqui o líder ANTES de criar o GCA. Ele acessa o sistema, então precisa de e-mail e senha. O cônjuge (líder 2) não precisa de cadastro — o nome dele é informado na criação do GCA."
               deptRoles={['discipleship_supervisor', 'discipleship_leader']}
               assignRoles={FULL_ACCESS.includes(profile.role) ? ['discipleship_supervisor', 'discipleship_leader'] : ['discipleship_leader']}
               canEdit={canManageDept}
