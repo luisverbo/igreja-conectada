@@ -4,6 +4,7 @@ import { Users } from 'lucide-react'
 import { CreateUserDialog } from '@/components/configuracoes/create-user-dialog'
 import { EditUserDialog } from '@/components/configuracoes/edit-user-dialog'
 import { LinkExistingUser } from '@/components/configuracoes/link-existing-user'
+import { DeleteUserButton } from '@/components/configuracoes/delete-user-button'
 import { ROLE_LABELS } from '@/lib/roles'
 
 interface Props {
@@ -82,7 +83,10 @@ export async function DepartmentTeamCard({ churchId, currentUserId, title, descr
                   {u.is_active ? 'Ativo' : 'Inativo'}
                 </Badge>
                 {canEdit && u.id !== currentUserId && !isLinked && (
-                  <EditUserDialog user={u} allowedRoles={assignRoles} />
+                  <>
+                    <EditUserDialog user={u} allowedRoles={assignRoles} />
+                    <DeleteUserButton userId={u.id} userName={u.full_name} compact />
+                  </>
                 )}
               </div>
             )

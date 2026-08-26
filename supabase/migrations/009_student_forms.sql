@@ -24,3 +24,5 @@
 -- 013: gca_requests (solicitações de inclusão/transferência) +
 --      policy UPDATE em discipleship_observations (corrige edição)
 -- 014: surveys, survey_targets, survey_responses (pesquisas dos GCAs)
+-- 015: FKs para profiles em ON DELETE SET NULL (permite excluir usuário
+--      preservando o histórico) + profiles.id CASCADE de auth.users

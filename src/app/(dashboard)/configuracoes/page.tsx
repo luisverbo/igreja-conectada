@@ -7,6 +7,7 @@ import { Settings, Users, Church, MessageSquare, Clock, UserCheck } from 'lucide
 import { formatDate } from '@/lib/utils'
 import { CreateUserDialog } from '@/components/configuracoes/create-user-dialog'
 import { EditUserDialog } from '@/components/configuracoes/edit-user-dialog'
+import { DeleteUserButton } from '@/components/configuracoes/delete-user-button'
 import { EditChurchDialog } from '@/components/configuracoes/edit-church-dialog'
 import { WhatsAppSection } from '@/components/configuracoes/whatsapp-section'
 import { FollowupRulesSection } from '@/components/configuracoes/followup-rules-section'
@@ -134,7 +135,10 @@ export default async function ConfiguracoesPage() {
                       <TableCell className="text-sm text-slate-500">{formatDate(u.created_at)}</TableCell>
                       <TableCell>
                         {u.id !== profile.id && u.role !== 'super_admin' && (
-                          <EditUserDialog user={u} allowCustomAccess />
+                          <div className="flex items-center gap-2">
+                            <EditUserDialog user={u} allowCustomAccess />
+                            <DeleteUserButton userId={u.id} userName={u.full_name} compact />
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
