@@ -35,9 +35,11 @@ interface Discipleship {
 
 interface Props {
   discipleship: Discipleship
+  /** Só o ícone de lápis — para usar nas linhas da lista */
+  compact?: boolean
 }
 
-export function EditDiscipleshipDialog({ discipleship }: Props) {
+export function EditDiscipleshipDialog({ discipleship, compact }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -169,19 +171,25 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <Pencil className="h-4 w-4 mr-2" />
-        Editar
-      </Button>
+      {compact ? (
+        <button onClick={() => setOpen(true)} title="Editar GCA" className="text-slate-300 hover:text-violet-600 p-1">
+          <Pencil className="h-4 w-4" />
+        </button>
+      ) : (
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+          <Pencil className="h-4 w-4 mr-2" />
+          Editar
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent onClose={() => setOpen(false)}>
           <DialogHeader>
-            <DialogTitle>Editar Discipulado</DialogTitle>
+            <DialogTitle>Editar GCA</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Nome do Discipulado *</Label>
+              <Label>Nome do GCA *</Label>
               <Input value={form.name} onChange={e => set('name', e.target.value)} required />
             </div>
             <div className="space-y-2">

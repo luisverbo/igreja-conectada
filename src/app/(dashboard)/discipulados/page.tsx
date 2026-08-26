@@ -11,6 +11,7 @@ import { LocationsSection } from '@/components/discipulados/locations-section'
 import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
 import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
+import { EditDiscipleshipDialog } from '@/components/discipulados/edit-discipleship-dialog'
 import { GcaSetupGuide } from '@/components/discipulados/setup-guide'
 import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
@@ -320,6 +321,9 @@ export default async function DiscipuladosPage() {
                           <Link href={`/discipulados/${d.id}`}>
                             <Button variant="ghost" size="sm">Acompanhar</Button>
                           </Link>
+                          {canManageDept && (
+                            <EditDiscipleshipDialog discipleship={d} compact />
+                          )}
                           {canManageDept && (
                             <DeleteGcaButton
                               gcaId={d.id}
