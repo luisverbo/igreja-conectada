@@ -10,6 +10,7 @@ import { NewDiscipleshipDialog } from '@/components/discipulados/new-discipleshi
 import { LocationsSection } from '@/components/discipulados/locations-section'
 import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
 import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
+import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
 import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
 import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
@@ -289,9 +290,19 @@ export default async function DiscipuladosPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Link href={`/discipulados/${d.id}`}>
-                          <Button variant="ghost" size="sm">Acompanhar</Button>
-                        </Link>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <Link href={`/discipulados/${d.id}`}>
+                            <Button variant="ghost" size="sm">Acompanhar</Button>
+                          </Link>
+                          {canManageDept && (
+                            <DeleteGcaButton
+                              gcaId={d.id}
+                              gcaName={d.name}
+                              memberCount={memberMap[d.id] || 0}
+                              compact
+                            />
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

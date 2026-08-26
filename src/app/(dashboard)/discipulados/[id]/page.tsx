@@ -14,6 +14,7 @@ import { EditDiscipleshipDialog } from '@/components/discipulados/edit-disciples
 import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
 import { ObservationEditButton } from '@/components/discipulados/observation-edit-button'
 import { GcaSurveysCard } from '@/components/gca/gca-surveys-card'
+import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
   ativo: 'success',
@@ -146,7 +147,14 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
               {discipleship.status === 'ativo' ? 'Ativo' : 'Inativo'}
             </Badge>
             {profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor'].includes(profile.role) && (
-              <EditDiscipleshipDialog discipleship={discipleship} />
+              <>
+                <EditDiscipleshipDialog discipleship={discipleship} />
+                <DeleteGcaButton
+                  gcaId={id}
+                  gcaName={discipleship.name}
+                  memberCount={members?.filter(m => m.status !== 'inativo').length || 0}
+                />
+              </>
             )}
             {profile && <AddMemberDialog discipleshipId={id} churchId={profile.church_id} userId={profile.id} userRole={profile.role} />}
           </div>
