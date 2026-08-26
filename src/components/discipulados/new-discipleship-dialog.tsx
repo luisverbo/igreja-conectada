@@ -24,10 +24,14 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
   const [locations, setLocations] = useState<any[]>([])
   const [form, setForm] = useState({
     name: '',
+    leader_mode: 'name' as 'system' | 'name',
     leader_id: '',
+    leader_name: '',
+    leader_phone: '',
     leader2_mode: 'none' as 'none' | 'system' | 'name',
     leader2_id: '',
     leader2_name: '',
+    leader2_phone: '',
     supervisor_id: '',
     location_id: '',
     day_of_week: '',
@@ -70,9 +74,12 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
     await supabase.from('discipleships').insert({
       church_id: churchId,
       name: form.name,
-      leader_id: form.leader_id || userId,
+      leader_id: form.leader_mode === 'system' ? form.leader_id || null : null,
+      leader_name: form.leader_mode === 'name' ? form.leader_name.trim() || null : null,
+      leader_phone: form.leader_mode === 'name' ? form.leader_phone.trim() || null : null,
       leader2_id: form.leader2_mode === 'system' ? form.leader2_id || null : null,
       leader2_name: form.leader2_mode === 'name' ? form.leader2_name.trim() || null : null,
+      leader2_phone: form.leader2_mode === 'name' ? form.leader2_phone.trim() || null : null,
       supervisor_id: form.supervisor_id || null,
       location_id: form.location_id || null,
       address: loc?.address || null,
@@ -91,7 +98,7 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
     setLoading(false)
     setOpen(false)
     router.refresh()
-    setForm({ name: '', leader_id: '', leader2_mode: 'none', leader2_id: '', leader2_name: '', supervisor_id: '', location_id: '', day_of_week: '', time_start: '', meeting_frequency: 'semanal', notes: '' })
+    setForm({ name: '', leader_mode: 'name', leader_id: '', leader_name: '', leader_phone: '', leader2_mode: 'none', leader2_id: '', leader2_name: '', leader2_phone: '', supervisor_id: '', location_id: '', day_of_week: '', time_start: '', meeting_frequency: 'semanal', notes: '' })
   }
 
   return (
@@ -115,15 +122,41 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
             {/* Liderança — normalmente um casal (jovens pode ser 1 pessoa) */}
             <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4 space-y-3">
               <p className="text-sm font-semibold text-violet-900">Liderança do GCA 👫</p>
+              <p className="text-xs text-violet-700 -mt-2">
+                Pode cadastrar só pelo nome agora. Quando o líder for acessar o sistema, crie o login
+                em &ldquo;Equipe de GCA&rdquo; e volte aqui para vincular.
+              </p>
               <div className="space-y-2">
-                <Label>Líder 1 * <span className="text-slate-400 font-normal text-xs">(tem acesso ao sistema)</span></Label>
-                <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione" required>
-                  {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+                <Label>Líder 1 *</Label>
+                <Select value={form.leader_mode} onChange={e => set('leader_mode', e.target.value)}>
+                  <option value="name">Só o nome (ainda não acessa o sistema)</option>
+                  <option value="system">Já tem acesso ao sistema</option>
                 </Select>
-                {leaders.length === 0 && (
-                  <p className="text-xs text-amber-600">
-                    Nenhum líder cadastrado — cadastre primeiro em &ldquo;Equipe de GCA&rdquo; (botão Adicionar) na página anterior.
-                  </p>
+                {form.leader_mode === 'system' ? (
+                  <>
+                    <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione o usuário" required>
+                      {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+                    </Select>
+                    {leaders.length === 0 && (
+                      <p className="text-xs text-amber-600">
+                        Nenhum usuário cadastrado — use &ldquo;Só o nome&rdquo; por enquanto, ou cadastre em &ldquo;Equipe de GCA&rdquo;.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={form.leader_name}
+                      onChange={e => set('leader_name', e.target.value)}
+                      placeholder="Nome do líder *"
+                      required
+                    />
+                    <Input
+                      value={form.leader_phone}
+                      onChange={e => set('leader_phone', e.target.value)}
+                      placeholder="WhatsApp (opcional)"
+                    />
+                  </div>
                 )}
               </div>
 
@@ -143,11 +176,18 @@ export function NewDiscipleshipDialog({ churchId, userId }: Props) {
                   </Select>
                 )}
                 {form.leader2_mode === 'name' && (
-                  <Input
-                    value={form.leader2_name}
-                    onChange={e => set('leader2_name', e.target.value)}
-                    placeholder="Nome do cônjuge — ex: Maria Silva"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={form.leader2_name}
+                      onChange={e => set('leader2_name', e.target.value)}
+                      placeholder="Nome do cônjuge"
+                    />
+                    <Input
+                      value={form.leader2_phone}
+                      onChange={e => set('leader2_phone', e.target.value)}
+                      placeholder="WhatsApp (opcional)"
+                    />
+                  </div>
                 )}
               </div>
             </div>

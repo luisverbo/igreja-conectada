@@ -26,3 +26,5 @@
 -- 014: surveys, survey_targets, survey_responses (pesquisas dos GCAs)
 -- 015: FKs para profiles em ON DELETE SET NULL (permite excluir usuário
 --      preservando o histórico) + profiles.id CASCADE de auth.users
+-- 016: discipleships.leader_name/leader_phone/leader2_phone
+--      (líder cadastrado só pelo nome, sem login)

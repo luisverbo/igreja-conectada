@@ -20,22 +20,23 @@ export function GcaSetupGuide({ locationCount, leaderCount, gcaCount }: Props) {
       where: 'Card “Locais dos GCAs” → Novo Local',
     },
     {
-      done: leaderCount > 0,
-      icon: UserPlus,
-      title: 'Cadastre o líder',
-      desc: 'O líder acessa o sistema, então precisa de e-mail e senha. O cônjuge não precisa — o nome dele entra no passo 3.',
-      where: 'Card “Equipe de GCA” → Adicionar',
-    },
-    {
       done: gcaCount > 0,
       icon: Home,
       title: 'Crie o GCA',
-      desc: 'Aqui você junta tudo: nome do grupo, líder (e o cônjuge), o local e o dia/horário.',
+      desc: 'Junta tudo: nome do grupo, o local e o casal de líderes — que pode ser cadastrado SÓ PELO NOME, sem login.',
       where: 'Botão “Novo GCA”, mais abaixo',
+    },
+    {
+      done: leaderCount > 0,
+      icon: UserPlus,
+      title: 'Dê acesso ao líder (quando precisar)',
+      desc: 'Só para quem vai USAR o sistema (registrar observações, acompanhar membros). Depois de criar o login, edite o GCA e vincule.',
+      where: 'Card “Equipe de GCA” → Adicionar',
+      optional: true,
     },
   ]
 
-  if (steps.every(s => s.done)) return null
+  if (steps.every(s => s.done || (s as any).optional)) return null
 
   return (
     <div className="rounded-2xl border border-violet-200 bg-white p-5">
@@ -58,7 +59,10 @@ export function GcaSetupGuide({ locationCount, leaderCount, gcaCount }: Props) {
                 }`}>
                   {s.done ? <Check className="h-4 w-4" /> : i + 1}
                 </span>
-                <p className={`text-sm font-bold ${s.done ? 'text-emerald-800' : 'text-slate-900'}`}>{s.title}</p>
+                <p className={`text-sm font-bold ${s.done ? 'text-emerald-800' : 'text-slate-900'}`}>
+                  {s.title}
+                  {(s as any).optional && !s.done && <span className="ml-1 text-[10px] font-normal text-slate-400">opcional</span>}
+                </p>
               </div>
               <p className="text-xs text-slate-600 mb-2">{s.desc}</p>
               <p className={`text-[11px] font-medium flex items-center gap-1 ${s.done ? 'text-emerald-600' : 'text-violet-600'}`}>

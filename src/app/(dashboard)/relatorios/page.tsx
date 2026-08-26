@@ -8,6 +8,7 @@ import { ChartsSection } from '@/components/relatorios/charts-section'
 import { MapSection } from '@/components/relatorios/map-section'
 import { NeighborhoodFilter } from '@/components/relatorios/neighborhood-filter'
 import Link from 'next/link'
+import { leadersShort } from '@/lib/gca'
 
 export default async function RelatoriosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -42,7 +43,7 @@ export default async function RelatoriosPage() {
       .limit(24),
     supabase
       .from('discipleships')
-      .select('id, name, status, day_of_week, latitude, longitude, leader2_name, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name)')
+      .select('id, name, status, day_of_week, latitude, longitude, leader_name, leader2_name, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name)')
       .eq('church_id', cid),
     supabase
       .from('discipleship_members')
@@ -295,12 +296,10 @@ export default async function RelatoriosPage() {
   const discipleshipMarkers = (discipleships || [])
     .filter(d => d.status === 'ativo' && d.latitude != null && d.longitude != null)
     .map(d => {
-      const l1 = (d.leader as any)?.full_name
-      const l2 = (d.leader2 as any)?.full_name || d.leader2_name
       return {
         id: d.id,
         name: d.name,
-        leader_name: l1 && l2 ? `${l1.split(' ')[0]} & ${l2.split(' ')[0]}` : l1 ?? null,
+        leader_name: leadersShort(d as any),
         day_of_week: d.day_of_week ?? null,
         latitude: d.latitude as number,
         longitude: d.longitude as number,
@@ -717,13 +716,12 @@ export default async function RelatoriosPage() {
             {discipleships && discipleships.filter(d => d.status === 'ativo').length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {discipleships.filter(d => d.status === 'ativo').map((d: any) => {
-                  const l1 = d.leader?.full_name
-                  const l2 = d.leader2?.full_name || d.leader2_name
+                  const label = leadersShort(d)
                   return (
                     <Link key={d.id} href={`/discipulados/${d.id}`} className="rounded-xl border border-slate-200 p-3 hover:border-violet-300 hover:bg-violet-50/40 transition-colors block">
                       <p className="text-sm font-semibold text-slate-900 truncate">{d.name}</p>
                       <p className="text-xs text-slate-500 truncate mt-0.5">
-                        {l1 && l2 ? `👫 ${l1.split(' ')[0]} & ${l2.split(' ')[0]}` : l1 || 'Sem líder'}
+                        {label ? (label.includes('&') ? `👫 ${label}` : label) : 'Sem líder'}
                       </p>
                     </Link>
                   )

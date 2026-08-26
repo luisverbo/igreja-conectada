@@ -16,8 +16,11 @@ interface Discipleship {
   church_id: string
   name: string
   leader_id: string | null
+  leader_name?: string | null
+  leader_phone?: string | null
   leader2_id?: string | null
   leader2_name?: string | null
+  leader2_phone?: string | null
   supervisor_id: string | null
   location_id?: string | null
   address: string | null
@@ -43,10 +46,14 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
   const [locations, setLocations] = useState<any[]>([])
   const [form, setForm] = useState({
     name: discipleship.name,
+    leader_mode: (discipleship.leader_id ? 'system' : 'name') as 'system' | 'name',
     leader_id: discipleship.leader_id || '',
+    leader_name: discipleship.leader_name || '',
+    leader_phone: discipleship.leader_phone || '',
     leader2_mode: (discipleship.leader2_id ? 'system' : discipleship.leader2_name ? 'name' : 'none') as 'none' | 'system' | 'name',
     leader2_id: discipleship.leader2_id || '',
     leader2_name: discipleship.leader2_name || '',
+    leader2_phone: discipleship.leader2_phone || '',
     supervisor_id: discipleship.supervisor_id || '',
     location_id: discipleship.location_id || '',
     address: discipleship.address || '',
@@ -128,9 +135,12 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
       .from('discipleships')
       .update({
         name: form.name.trim(),
-        leader_id: form.leader_id || null,
+        leader_id: form.leader_mode === 'system' ? form.leader_id || null : null,
+        leader_name: form.leader_mode === 'name' ? form.leader_name.trim() || null : null,
+        leader_phone: form.leader_mode === 'name' ? form.leader_phone.trim() || null : null,
         leader2_id: form.leader2_mode === 'system' ? form.leader2_id || null : null,
         leader2_name: form.leader2_mode === 'name' ? form.leader2_name.trim() || null : null,
+        leader2_phone: form.leader2_mode === 'name' ? form.leader2_phone.trim() || null : null,
         supervisor_id: form.supervisor_id || null,
         location_id: form.location_id || null,
         address: form.address.trim() || null,
@@ -175,10 +185,21 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
               <Input value={form.name} onChange={e => set('name', e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label>Líder 1 <span className="text-slate-400 font-normal text-xs">(tem acesso ao sistema)</span></Label>
-              <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione">
-                {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+              <Label>Líder 1</Label>
+              <Select value={form.leader_mode} onChange={e => set('leader_mode', e.target.value)}>
+                <option value="name">Só o nome (ainda não acessa o sistema)</option>
+                <option value="system">Já tem acesso ao sistema</option>
               </Select>
+              {form.leader_mode === 'system' ? (
+                <Select value={form.leader_id} onChange={e => set('leader_id', e.target.value)} placeholder="Selecione o usuário">
+                  {leaders.map(l => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+                </Select>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Input value={form.leader_name} onChange={e => set('leader_name', e.target.value)} placeholder="Nome do líder" />
+                  <Input value={form.leader_phone} onChange={e => set('leader_phone', e.target.value)} placeholder="WhatsApp (opcional)" />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -194,11 +215,10 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
                 </Select>
               )}
               {form.leader2_mode === 'name' && (
-                <Input
-                  value={form.leader2_name}
-                  onChange={e => set('leader2_name', e.target.value)}
-                  placeholder="Nome do cônjuge — ex: Maria Silva"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input value={form.leader2_name} onChange={e => set('leader2_name', e.target.value)} placeholder="Nome do cônjuge" />
+                  <Input value={form.leader2_phone} onChange={e => set('leader2_phone', e.target.value)} placeholder="WhatsApp (opcional)" />
+                </div>
               )}
             </div>
 

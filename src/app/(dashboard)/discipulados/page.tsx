@@ -16,6 +16,7 @@ import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
 import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { leadersShort } from '@/lib/gca'
 
 export default async function DiscipuladosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -270,9 +271,9 @@ export default async function DiscipuladosPage() {
                       <TableCell className="font-medium text-slate-900">{d.name}</TableCell>
                       <TableCell className="text-sm text-slate-600">
                         {(() => {
-                          const second = d.leader2?.full_name || d.leader2_name
-                          if (d.leader?.full_name && second) return <span>👫 {d.leader.full_name.split(' ')[0]} & {second.split(' ')[0]}</span>
-                          return d.leader?.full_name || '—'
+                          const label = leadersShort(d)
+                          if (!label) return '—'
+                          return <span>{label.includes('&') ? `👫 ${label}` : label}</span>
                         })()}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">{d.supervisor?.full_name || '—'}</TableCell>

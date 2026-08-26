@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Home, X, Loader2, MapPin, Check, Navigation } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { sortByProximity, formatKm } from '@/lib/geo'
+import { leadersShort } from '@/lib/gca'
 
 interface Props {
   personId: string
@@ -31,7 +32,7 @@ export function EncaminharDialog({ personId, personName, personLat, personLng, c
     const supabase = createClient()
     supabase
       .from('discipleships')
-      .select('id, name, latitude, longitude, location:gca_locations(name, host_name, neighborhood, city), leader:profiles!discipleships_leader_id_fkey(full_name), leader2_name')
+      .select('id, name, latitude, longitude, location:gca_locations(name, host_name, neighborhood, city), leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), leader_name, leader2_name')
       .eq('church_id', churchId)
       .eq('status', 'ativo')
       .then(({ data }) => {
@@ -103,8 +104,7 @@ export function EncaminharDialog({ personId, personName, personLat, personLng, c
               ) : (
                 <div className="space-y-2">
                   {gcas.map((g, i) => {
-                    const l1 = g.leader?.full_name
-                    const l2 = g.leader2_name
+                    const leadersLabel = leadersShort(g)
                     return (
                       <button
                         key={g.id}
@@ -123,7 +123,7 @@ export function EncaminharDialog({ personId, personName, personLat, personLng, c
                           )}
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">
-                          {[l1 && l2 ? `👫 ${l1.split(' ')[0]} & ${l2.split(' ')[0]}` : l1, g.location?.neighborhood || g.location?.name].filter(Boolean).join(' · ')}
+                          {[leadersLabel ? (leadersLabel.includes('&') ? `👫 ${leadersLabel}` : leadersLabel) : null, g.location?.neighborhood || g.location?.name].filter(Boolean).join(' · ')}
                         </p>
                       </button>
                     )

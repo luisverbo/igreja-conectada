@@ -14,6 +14,7 @@ import { EditDiscipleshipDialog } from '@/components/discipulados/edit-disciples
 import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
 import { ObservationEditButton } from '@/components/discipulados/observation-edit-button'
 import { GcaSurveysCard } from '@/components/gca/gca-surveys-card'
+import { leadersFull, leaderNames } from '@/lib/gca'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
@@ -104,14 +105,11 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
               {discipleship.name}
             </h1>
             <div className="flex flex-wrap gap-3 mt-1 text-sm text-slate-500">
-              {discipleship.leader?.full_name && (
+              {leadersFull(discipleship) && (
                 <span>
-                  {(discipleship.leader2?.full_name || discipleship.leader2_name) ? 'Líderes: ' : 'Líder: '}
-                  <strong>
-                    {discipleship.leader.full_name}
-                    {(discipleship.leader2?.full_name || discipleship.leader2_name) && ` & ${discipleship.leader2?.full_name || discipleship.leader2_name}`}
-                  </strong>
-                  {(discipleship.leader2?.full_name || discipleship.leader2_name) && ' 👫'}
+                  {leaderNames(discipleship).length > 1 ? 'Líderes: ' : 'Líder: '}
+                  <strong>{leadersFull(discipleship)}</strong>
+                  {leaderNames(discipleship).length > 1 && ' 👫'}
                 </span>
               )}
               {discipleship.supervisor?.full_name && <span>· Supervisor: {discipleship.supervisor.full_name}</span>}

@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import { AUDIENCE_META, type Audience } from '@/lib/survey'
 import { SurveyForm } from './survey-form'
+import { leaderNames } from '@/lib/gca'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ export default async function PesquisaPage({ params }: { params: Promise<{ token
       id, discipleship_id,
       survey:surveys(id, title, description, audience, questions, allow_anonymous, active, church_id),
       gca:discipleships(
-        id, name, leader2_name,
+        id, name, leader_name, leader2_name,
         leader:profiles!discipleships_leader_id_fkey(full_name),
         leader2:profiles!discipleships_leader2_id_fkey(full_name),
         location:gca_locations(name, host_name)
@@ -60,16 +61,13 @@ export default async function PesquisaPage({ params }: { params: Promise<{ token
       .filter(p => p.name)
       .sort((a, b) => a.name.localeCompare(b.name))
   } else if (audience === 'lideres') {
-    const l1 = gca?.leader?.full_name
-    const l2 = gca?.leader2?.full_name || gca?.leader2_name
-    if (l1) people.push({ id: null, name: l1, role: 'lider' })
-    if (l2) people.push({ id: null, name: l2, role: 'lider' })
+    leaderNames(gca || {}).forEach(n => people.push({ id: null, name: n, role: 'lider' }))
   } else if (audience === 'anfitrioes') {
     const host = gca?.location?.host_name
     if (host) people.push({ id: null, name: host, role: 'anfitriao' })
   }
 
-  const leaderNames = [gca?.leader?.full_name, gca?.leader2?.full_name || gca?.leader2_name].filter(Boolean)
+  const gcaLeaders = leaderNames(gca || {})
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-slate-100 py-8 px-4">
@@ -88,7 +86,7 @@ export default async function PesquisaPage({ params }: { params: Promise<{ token
           <p className="text-xs text-slate-400 uppercase font-semibold tracking-wide">Esta pesquisa é do</p>
           <p className="text-base font-bold text-violet-800">🏠 {gca?.name}</p>
           <p className="text-xs text-slate-500 mt-0.5">
-            {leaderNames.length > 0 && <>Líder(es): {leaderNames.join(' & ')}</>}
+            {gcaLeaders.length > 0 && <>Líder(es): {gcaLeaders.join(' & ')}</>}
             {gca?.location?.host_name && <> · Anfitrião: {gca.location.host_name}</>}
           </p>
           <p className="text-xs text-violet-600 mt-1.5">{meta.emoji} Para: {meta.label}</p>

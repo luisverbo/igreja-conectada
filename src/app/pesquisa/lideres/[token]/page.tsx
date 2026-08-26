@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import { AUDIENCE_META, type Audience } from '@/lib/survey'
 import { LeaderPicker } from './leader-picker'
+import { leaderNames } from '@/lib/gca'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +43,7 @@ export default async function HubLideresPage({ params }: { params: Promise<{ tok
     .select(`
       token,
       gca:discipleships(
-        id, name, leader2_name,
+        id, name, leader_name, leader2_name,
         leader:profiles!discipleships_leader_id_fkey(full_name),
         leader2:profiles!discipleships_leader2_id_fkey(full_name),
         location:gca_locations(name, host_name)
@@ -55,7 +56,7 @@ export default async function HubLideresPage({ params }: { params: Promise<{ tok
   for (const t of targets || []) {
     const g = t.gca as any
     if (!g) continue
-    const names = [g.leader?.full_name, g.leader2?.full_name || g.leader2_name].filter(Boolean)
+    const names = leaderNames(g)
     if (names.length === 0) {
       entries.push({ key: `${t.token}-gca`, leaderName: `(sem líder cadastrado)`, gcaName: g.name, token: t.token, hostName: g.location?.host_name })
     }
