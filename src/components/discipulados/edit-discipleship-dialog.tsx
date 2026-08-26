@@ -105,15 +105,15 @@ export function EditDiscipleshipDialog({ discipleship }: Props) {
 
     if (addressChanged && form.address && form.city) {
       try {
-        const query = encodeURIComponent(`${form.address}, ${form.neighborhood || ''} ${form.city} Brasil`)
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
-          { headers: { 'User-Agent': 'IgrejaConectada/1.0' } }
-        )
+        const res = await fetch('/api/geocode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: form.address, neighborhood: form.neighborhood, city: form.city }),
+        })
         const geoData = await res.json()
-        if (Array.isArray(geoData) && geoData.length > 0) {
-          latitude = parseFloat(geoData[0].lat)
-          longitude = parseFloat(geoData[0].lon)
+        if (geoData.found) {
+          latitude = geoData.lat
+          longitude = geoData.lng
         }
       } catch {
         // silently ignore geocoding errors

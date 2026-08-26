@@ -49,30 +49,31 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
       setCepLoading(true)
       setCoords(null)
       try {
-        const [viaCepRes, nominatimRes] = await Promise.allSettled([
-          fetch(`https://viacep.com.br/ws/${digits}/json/`),
-          fetch(`https://nominatim.openstreetmap.org/search?q=${digits}+Brasil&format=json&limit=1`, {
-            headers: { 'User-Agent': 'IgrejaConectada/1.0' },
-          }),
-        ])
+        const viaCepRes = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+        const data: CepData = await viaCepRes.json()
+        if (!data.erro) {
+          setForm(p => ({
+            ...p,
+            address: data.logradouro || p.address,
+            neighborhood: data.bairro || p.neighborhood,
+            city: data.localidade || p.city,
+            state: data.uf || p.state,
+          }))
 
-        if (viaCepRes.status === 'fulfilled') {
-          const data: CepData = await viaCepRes.value.json()
-          if (!data.erro) {
-            setForm(p => ({
-              ...p,
-              address: data.logradouro || p.address,
-              neighborhood: data.bairro || p.neighborhood,
-              city: data.localidade || p.city,
-              state: data.uf || p.state,
-            }))
-          }
-        }
-
-        if (nominatimRes.status === 'fulfilled') {
-          const geoData = await nominatimRes.value.json()
-          if (Array.isArray(geoData) && geoData.length > 0) {
-            setCoords({ lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) })
+          // Geocodifica no servidor com o endereço resolvido pelo CEP
+          if (data.localidade && (data.logradouro || data.bairro)) {
+            const geoRes = await fetch('/api/geocode', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                address: data.logradouro,
+                neighborhood: data.bairro,
+                city: data.localidade,
+                state: data.uf,
+              }),
+            })
+            const geoData = await geoRes.json()
+            if (geoData.found) setCoords({ lat: geoData.lat, lng: geoData.lng })
           }
         }
       } catch {

@@ -61,26 +61,32 @@ export function LocationsSection({ churchId, canEdit }: Props) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
   }
 
+  async function geocode(): Promise<{ found: boolean; precise?: boolean; label?: string; lat?: number; lng?: number }> {
+    try {
+      const res = await fetch('/api/geocode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: form.address,
+          neighborhood: form.neighborhood,
+          city: form.city,
+          state: form.state,
+        }),
+      })
+      if (!res.ok) return { found: false }
+      return await res.json()
+    } catch {
+      return { found: false }
+    }
+  }
+
   async function runVerify() {
     if (!canVerify) return
     setVerify({ status: 'loading' })
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressQuery())}&format=json&addressdetails=1&limit=1`,
-        { headers: { 'User-Agent': 'IgrejaConectada/1.0' } }
-      )
-      const geo = await res.json()
-      if (Array.isArray(geo) && geo.length > 0) {
-        setVerify({
-          status: 'found',
-          label: geo[0].display_name as string,
-          lat: parseFloat(geo[0].lat),
-          lng: parseFloat(geo[0].lon),
-        })
-      } else {
-        setVerify({ status: 'notfound' })
-      }
-    } catch {
+    const geo = await geocode()
+    if (geo.found && geo.lat != null && geo.lng != null) {
+      setVerify({ status: 'found', label: geo.label || addressQuery(), lat: geo.lat, lng: geo.lng })
+    } else {
       setVerify({ status: 'notfound' })
     }
   }
@@ -152,18 +158,11 @@ export function LocationsSection({ churchId, canEdit }: Props) {
       latitude = checked.lat
       longitude = checked.lng
     } else if (addressChanged && form.address && form.city) {
-      try {
-        const query = encodeURIComponent(`${form.address}, ${form.neighborhood || ''} ${form.city} Brasil`)
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
-          { headers: { 'User-Agent': 'IgrejaConectada/1.0' } }
-        )
-        const geo = await res.json()
-        if (Array.isArray(geo) && geo.length > 0) {
-          latitude = parseFloat(geo[0].lat)
-          longitude = parseFloat(geo[0].lon)
-        }
-      } catch { /* geocoding é opcional */ }
+      const geo = await geocode()
+      if (geo.found && geo.lat != null && geo.lng != null) {
+        latitude = geo.lat
+        longitude = geo.lng
+      }
     }
 
     const supabase = createClient()
