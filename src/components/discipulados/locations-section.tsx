@@ -1,8 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Loader2, X, MapPin, Church, HomeIcon, Pencil, ExternalLink, Search, Check, AlertTriangle } from 'lucide-react'
+import dynamicImport from 'next/dynamic'
+import { Plus, Trash2, Loader2, X, MapPin, Church, HomeIcon, Pencil, ExternalLink, Search, Check, AlertTriangle, Crosshair } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+
+const MapPicker = dynamicImport(
+  () => import('./map-picker').then(mod => mod.MapPicker),
+  { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center bg-slate-100"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></div> }
+)
 
 interface Props {
   churchId: string
@@ -36,13 +42,19 @@ export function LocationsSection({ churchId, canEdit }: Props) {
     | { status: 'notfound' }
     | { status: 'confirmed'; label: string; lat: number; lng: number }
   const [verify, setVerify] = useState<Verify>({ status: 'idle' })
+  // Mapa de ajuste fino: mapKey força recentrar quando o "Localizar" acha novas coordenadas
+  const [showMap, setShowMap] = useState(false)
+  const [mapKey, setMapKey] = useState(0)
 
   const ADDRESS_FIELDS = ['address', 'neighborhood', 'city', 'state']
 
   function set(k: string, v: string) {
     setForm(p => ({ ...p, [k]: v }))
-    // Mexeu no endereço? A conferência anterior não vale mais.
-    if (ADDRESS_FIELDS.includes(k)) setVerify({ status: 'idle' })
+    // Mexeu no endereço? A conferência anterior não vale mais (e o pino sai do mapa).
+    if (ADDRESS_FIELDS.includes(k)) {
+      if (verify.status !== 'idle') setMapKey(key => key + 1)
+      setVerify({ status: 'idle' })
+    }
   }
 
   function addressQuery() {
@@ -86,9 +98,15 @@ export function LocationsSection({ churchId, canEdit }: Props) {
     const geo = await geocode()
     if (geo.found && geo.lat != null && geo.lng != null) {
       setVerify({ status: 'found', label: geo.label || addressQuery(), lat: geo.lat, lng: geo.lng })
+      setMapKey(k => k + 1) // recentra o mapa na nova posição
     } else {
       setVerify({ status: 'notfound' })
     }
+  }
+
+  /** Pino colocado/arrastado pelo usuário — vale mais que qualquer busca. */
+  function pickOnMap(lat: number, lng: number) {
+    setVerify({ status: 'confirmed', label: 'Posição marcada por você no mapa', lat, lng })
   }
 
   const emptyForm = {
@@ -101,6 +119,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
     setForm(emptyForm)
     setError(null)
     setVerify({ status: 'idle' })
+    setShowMap(false)
     setOpen(true)
   }
 
@@ -123,6 +142,8 @@ export function LocationsSection({ churchId, canEdit }: Props) {
         ? { status: 'confirmed', label: 'Coordenadas já salvas neste local', lat: loc.latitude, lng: loc.longitude }
         : { status: 'idle' }
     )
+    setShowMap(false)
+    setMapKey(k => k + 1)
     setOpen(true)
   }
 
@@ -373,7 +394,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
                   <p className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                     <MapPin className="h-3.5 w-3.5 text-violet-600" /> Conferir endereço
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                     <button
                       type="button"
                       onClick={runVerify}
@@ -384,6 +405,20 @@ export function LocationsSection({ churchId, canEdit }: Props) {
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <Search className="h-3.5 w-3.5" />}
                       Localizar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const opening = !showMap
+                        setShowMap(opening)
+                        // Sem coordenadas ainda? Tenta ao menos centrar na região
+                        if (opening && verify.status !== 'found' && verify.status !== 'confirmed' && canVerify) runVerify()
+                      }}
+                      className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
+                        showMap ? 'border-violet-600 bg-violet-600 text-white' : 'border-violet-200 bg-white text-violet-700 hover:bg-violet-50'
+                      }`}
+                    >
+                      <Crosshair className="h-3.5 w-3.5" /> Marcar no mapa
                     </button>
                     <a
                       href={canVerify ? mapsUrl() : undefined}
@@ -437,8 +472,27 @@ export function LocationsSection({ churchId, canEdit }: Props) {
                 {verify.status === 'notfound' && (
                   <p className="mt-2 text-[11px] text-amber-700 flex items-start gap-1">
                     <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-px" />
-                    <span>Não localizamos no mapa. Confira no Google Maps e ajuste o endereço — dá para salvar assim mesmo, mas o local não aparecerá no mapa.</span>
+                    <span>Não localizamos pelo endereço. Use <strong>Marcar no mapa</strong> para colocar o pino você mesmo no lugar certo.</span>
                   </p>
+                )}
+
+                {showMap && (
+                  <div className="mt-2.5">
+                    <p className="text-[11px] text-slate-500 mb-1.5">
+                      🎯 Clique no lugar certo ou <strong>arraste o pino</strong> até a casa. Dê zoom para acertar em cheio.
+                    </p>
+                    <div className="h-64 w-full rounded-lg overflow-hidden border border-slate-200">
+                      <MapPicker
+                        key={mapKey}
+                        initial={
+                          verify.status === 'found' || verify.status === 'confirmed'
+                            ? { lat: verify.lat, lng: verify.lng }
+                            : null
+                        }
+                        onPick={pickOnMap}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
 
