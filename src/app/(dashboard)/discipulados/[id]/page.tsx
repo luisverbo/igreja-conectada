@@ -16,6 +16,7 @@ import { ObservationEditButton } from '@/components/discipulados/observation-edi
 import { GcaSurveysCard } from '@/components/gca/gca-surveys-card'
 import { leadersFull, leaderNames } from '@/lib/gca'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
+import { GcaSignupLinkCard } from '@/components/discipulados/signup-links-dialog'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
   ativo: 'success',
@@ -160,6 +161,10 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="p-6 space-y-6">
+        {discipleship.status === 'ativo' && discipleship.signup_token && (
+          <GcaSignupLinkCard gcaName={discipleship.name} token={discipleship.signup_token} />
+        )}
+
         {/* Notice - no attendance */}
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <p className="text-sm font-medium text-amber-800">Foco em Cuidado Pastoral</p>

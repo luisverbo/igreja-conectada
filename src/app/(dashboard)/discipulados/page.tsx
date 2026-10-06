@@ -13,6 +13,7 @@ import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
 import { EditDiscipleshipDialog } from '@/components/discipulados/edit-discipleship-dialog'
 import { GcaSetupGuide } from '@/components/discipulados/setup-guide'
+import { SignupLinksDialog, type GcaLinkItem } from '@/components/discipulados/signup-links-dialog'
 import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
 import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
@@ -30,7 +31,7 @@ export default async function DiscipuladosPage() {
 
   let gcaQuery = supabase
     .from('discipleships')
-    .select('*, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name)')
+    .select('*, leader:profiles!discipleships_leader_id_fkey(full_name, phone), leader2:profiles!discipleships_leader2_id_fkey(full_name, phone), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name)')
     .eq('church_id', profile.church_id)
     .order('name')
 
@@ -54,6 +55,23 @@ export default async function DiscipuladosPage() {
     locationCount = locs || 0
     leaderCount = leaders || 0
   }
+
+  // Link geral de cadastro dos GCAs (a pessoa escolhe o GCA)
+  let churchSignupToken: string | null = null
+  if (canManageDept) {
+    const { data: ch } = await supabase
+      .from('churches').select('gca_signup_token').eq('id', profile.church_id).single()
+    churchSignupToken = ch?.gca_signup_token ?? null
+  }
+  const signupLinks: GcaLinkItem[] = (discipleships || [])
+    .filter((d: any) => d.status === 'ativo')
+    .map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      leaders: leadersShort(d),
+      leaderPhone: d.leader?.phone || d.leader_phone || d.leader2?.phone || d.leader2_phone || null,
+      token: d.signup_token,
+    }))
 
   // Caixa de encaminhamentos (só gestão): concluintes de NM aguardando GCA
   // + solicitações pendentes de inclusão/transferência
@@ -236,7 +254,10 @@ export default async function DiscipuladosPage() {
         {/* Actions */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-base font-semibold text-slate-900">GCAs</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {canManageDept && churchSignupToken && (
+              <SignupLinksDialog churchToken={churchSignupToken} gcas={signupLinks} />
+            )}
             {canManageDept && (
               <Link
                 href="/discipulados/pesquisas"
