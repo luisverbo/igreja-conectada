@@ -49,7 +49,7 @@ export default async function ConfiguracoesPage() {
     <div>
       <Header title="Configurações" description="Igreja e usuários do sistema" userName={profile.full_name} userRole={profile.role} />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         {/* Church info */}
         <Card>
           <CardHeader>
@@ -94,7 +94,7 @@ export default async function ConfiguracoesPage() {
         {canManageUsers && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-violet-600" />
                   Usuários do Sistema
@@ -102,7 +102,33 @@ export default async function ConfiguracoesPage() {
                 <CreateUserDialog allowCustomAccess />
               </div>
             </CardHeader>
-            <CardContent className="p-0">
+            {/* Celular: usuários em lista */}
+            <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+              {users?.map(u => (
+                <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-semibold text-slate-900 truncate">{u.full_name}</span>
+                      {u.id === profile.id && <Badge variant="secondary" className="text-[10px] flex-shrink-0">Você</Badge>}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <Badge variant={roleVariant[u.role] || 'secondary'} className="text-[10px]">{roleLabels[u.role] || u.role}</Badge>
+                      {!u.is_active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
+                    </div>
+                    {u.phone && <p className="text-xs text-slate-400 mt-0.5">{u.phone}</p>}
+                  </div>
+                  {u.id !== profile.id && u.role !== 'super_admin' && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <EditUserDialog user={u} allowCustomAccess />
+                      <DeleteUserButton userId={u.id} userName={u.full_name} compact />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Computador: tabela */}
+            <CardContent className="p-0 hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>

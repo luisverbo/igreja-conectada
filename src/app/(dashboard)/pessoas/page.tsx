@@ -71,7 +71,7 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
     <div>
       <Header title="Pessoas" description="Gerencie a jornada espiritual de cada pessoa" userName={profile.full_name} userRole={profile.role} />
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         {/* Search + actions */}
         <div className="flex items-center gap-3">
           <form method="GET" action="/pessoas" className="flex-1 max-w-sm">
@@ -83,25 +83,27 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
                 name="q"
                 defaultValue={params.q || ''}
                 placeholder="Buscar por nome..."
-                className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full h-10 sm:h-9 pl-9 pr-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
             </div>
           </form>
           <Link href="/pessoas/nova">
             <Button size="sm">
               <UserPlus className="h-4 w-4 mr-2" />
-              Nova Pessoa
+              <span className="hidden sm:inline">Nova Pessoa</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </Link>
         </div>
 
         {/* Status filters */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* No celular os filtros rolam de lado, numa linha só */}
+        <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex items-center gap-2 overflow-x-auto sm:flex-wrap pb-1 sm:pb-0 [scrollbar-width:none]">
           {statusFilters.map((f) => (
             <Link key={f.value} href={f.value ? `/pessoas?status=${f.value}${params.q ? `&q=${params.q}` : ''}` : `/pessoas${params.q ? `?q=${params.q}` : ''}`}>
               <Badge
                 variant={params.status === f.value || (!params.status && !f.value) ? 'default' : 'outline'}
-                className="cursor-pointer hover:opacity-80 transition-opacity"
+                className="cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap py-1 px-3 sm:py-0.5 sm:px-2.5"
               >
                 {f.label}
               </Badge>
@@ -109,8 +111,47 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
           ))}
         </div>
 
-        {/* Table */}
-        <Card>
+        {/* Celular: lista em cartões */}
+        <div className="md:hidden space-y-2">
+          {people && people.length > 0 ? people.map(person => (
+            <div key={person.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+              <Link href={`/pessoas/${person.id}`} className="flex flex-1 min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+                  {person.full_name.split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900 truncate">{person.full_name}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <Badge variant={statusVariant[person.status as PersonStatus] || 'secondary'} className="text-[10px]">
+                      {PERSON_STATUS_LABELS[person.status as PersonStatus] || person.status}
+                    </Badge>
+                    {person.can_serve && <Badge variant="success" className="text-[10px]">Serve</Badge>}
+                  </div>
+                  {person.phone && <p className="text-xs text-slate-400 mt-0.5">{formatPhone(person.phone)}</p>}
+                </div>
+              </Link>
+              {person.phone && (
+                <a
+                  href={`https://wa.me/55${person.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="WhatsApp"
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 active:bg-emerald-100"
+                >
+                  <Phone className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          )) : (
+            <div className="rounded-xl border border-slate-200 bg-white py-12 text-center text-slate-400">
+              <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p>Nenhuma pessoa encontrada</p>
+            </div>
+          )}
+        </div>
+
+        {/* Computador: tabela */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
@@ -192,7 +233,7 @@ export default async function PessoasPage({ searchParams }: { searchParams: Prom
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <p className="text-sm text-slate-400">
             {count || 0} pessoa(s) · página {page} de {totalPages}
           </p>

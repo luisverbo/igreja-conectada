@@ -77,8 +77,8 @@ export function SignupLinksDialog({ churchToken, gcas }: Props) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-[92dvh] sm:max-h-[90vh] pb-[env(safe-area-inset-bottom)] sm:pb-0 flex flex-col">
             <div className="flex items-start justify-between p-5 border-b border-slate-100">
               <div>
                 <h2 className="text-base font-bold text-slate-900">Links de cadastro dos membros</h2>

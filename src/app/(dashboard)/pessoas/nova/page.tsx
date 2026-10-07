@@ -133,7 +133,7 @@ export default function NovaPessoaPage() {
         <h1 className="text-xl font-semibold text-slate-900">Cadastrar Nova Pessoa</h1>
       </div>
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
           {/* Dados pessoais */}
           <Card>

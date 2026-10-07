@@ -128,7 +128,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
   return (
     <div>
       {/* Header */}
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
+      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
         <div className="flex items-center gap-3 mb-3">
           <Link href="/discipulados">
             <Button variant="ghost" size="sm">
@@ -137,13 +137,14 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
             </Button>
           </Link>
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+        {/* Celular: info em cima, botões embaixo. Computador: lado a lado */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
               <Home className="h-5 w-5 text-violet-500" />
               {discipleship.name}
             </h1>
-            <div className="flex flex-wrap gap-3 mt-1 text-sm text-slate-500">
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-sm text-slate-500">
               {leadersFull(discipleship) && (
                 <span>
                   {leaderNames(discipleship).length > 1 ? 'Líderes: ' : 'Líder: '}
@@ -158,7 +159,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
             </div>
             {discipleship.location ? (
               <div className="text-sm text-slate-500 mt-0.5 space-y-0.5">
-                <p className="flex items-center gap-1">
+                <p className="flex items-center gap-1 flex-wrap">
                   <span>{discipleship.location.location_type === 'igreja' ? '⛪' : '🏠'}</span>
                   <strong className="text-slate-700">{discipleship.location.name}</strong>
                   {discipleship.location.host_name && (
@@ -166,8 +167,8 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                   )}
                 </p>
                 {(discipleship.location.address || discipleship.location.neighborhood) && (
-                  <p className="flex items-center gap-1 text-slate-400">
-                    <MapPin className="h-3 w-3" />
+                  <p className="flex items-start gap-1 text-slate-400">
+                    <MapPin className="h-3 w-3 mt-1 flex-shrink-0" />
                     {[discipleship.location.address, discipleship.location.neighborhood, discipleship.location.city].filter(Boolean).join(', ')}
                   </p>
                 )}
@@ -179,7 +180,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap lg:flex-shrink-0">
             <Badge variant={discipleship.status === 'ativo' ? 'success' : 'outline'}>
               {discipleship.status === 'ativo' ? 'Ativo' : 'Inativo'}
             </Badge>
@@ -198,7 +199,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         {discipleship.status === 'ativo' && discipleship.signup_token && (
           <GcaSignupLinkCard gcaName={discipleship.name} token={discipleship.signup_token} />
         )}
@@ -246,7 +247,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[
             { label: cap.limit ? `Membros Ativos (limite ${cap.limit})` : 'Membros Ativos', value: activeMembers.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Em Acompanhamento', value: needCare.length, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -255,13 +256,13 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
             const Icon = s.icon
             return (
               <Card key={s.label}>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
+                <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                  <div className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
                     <Icon className={`h-4 w-4 ${s.color}`} />
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-slate-900">{s.value}</p>
-                    <p className="text-xs text-slate-500">{s.label}</p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-900 leading-none sm:leading-normal">{s.value}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 leading-tight mt-1 sm:mt-0">{s.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -287,7 +288,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                 return (
                   <Card key={member.id} className={member.status === 'inativo' ? 'opacity-60' : ''}>
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
                             <Link href={`/pessoas/${member.people?.id}`} className="font-semibold text-slate-900 hover:text-violet-600 transition-colors">
@@ -329,7 +330,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                           )}
                         </div>
 
-                        <div className="flex flex-col gap-1 flex-shrink-0">
+                        <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2 sm:border-0 sm:pt-0 sm:flex-col sm:items-stretch sm:gap-1 sm:flex-shrink-0">
                           {profile && (
                             <ObservationDialog
                               memberId={member.id}
@@ -340,7 +341,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                               userId={profile.id}
                             />
                           )}
-                          <Link href={`/pessoas/${member.people?.id}`}>
+                          <Link href={`/pessoas/${member.people?.id}`} className="hidden sm:block">
                             <Button variant="ghost" size="sm" className="w-full">
                               <Eye className="h-3 w-3 mr-1" />
                               Perfil

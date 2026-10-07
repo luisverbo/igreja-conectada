@@ -57,7 +57,7 @@ export default async function SurveyDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div>
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
+      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
         <Link href="/discipulados/pesquisas" className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 mb-3">
           <ArrowLeft className="h-4 w-4" /> Pesquisas
         </Link>
@@ -74,7 +74,7 @@ export default async function SurveyDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 sm:p-6 space-y-5">
         {/* Links */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <LeadersHubLink token={survey.leaders_token} audience={survey.audience} />

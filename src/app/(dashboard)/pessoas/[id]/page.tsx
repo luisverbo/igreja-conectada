@@ -68,7 +68,7 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
   return (
     <div>
       {/* Header */}
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
+      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/pessoas">
             <Button variant="ghost" size="sm">
@@ -78,13 +78,13 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
           </Link>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-white text-lg font-bold">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 items-center justify-center rounded-full bg-violet-600 text-white text-base sm:text-lg font-bold">
               {getInitials(person.full_name)}
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">{person.full_name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-slate-900 leading-tight">{person.full_name}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <Badge variant={statusVariant[person.status as PersonStatus] || 'secondary'}>
                   {PERSON_STATUS_LABELS[person.status as PersonStatus]}
@@ -94,7 +94,7 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                 )}
                 {person.can_serve && <Badge variant="success">Apto para Servir</Badge>}
                 {person.accepted_jesus_at && person.origin !== 'veio_de_outra_igreja' && (
-                  <span className="text-sm text-slate-500">
+                  <span className="text-xs sm:text-sm text-slate-500">
                     Em jornada há {journeyDuration(person.accepted_jesus_at)}
                   </span>
                 )}
@@ -116,7 +116,7 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left column - info */}
         <div className="space-y-4">
           {/* Contact */}

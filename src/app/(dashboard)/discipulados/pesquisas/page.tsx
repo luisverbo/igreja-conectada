@@ -30,7 +30,7 @@ export default async function PesquisasPage() {
 
   return (
     <div>
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
+      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
         <Link href="/discipulados" className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 mb-3">
           <ArrowLeft className="h-4 w-4" /> GCA
         </Link>
@@ -45,7 +45,7 @@ export default async function PesquisasPage() {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {!surveys || surveys.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white py-16 text-center">
             <ClipboardList className="h-10 w-10 mx-auto mb-3 text-slate-300" />

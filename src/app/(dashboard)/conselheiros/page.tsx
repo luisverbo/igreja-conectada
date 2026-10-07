@@ -46,9 +46,9 @@ export default async function ConselheirosPage() {
     <div>
       <Header title="Conselheiros" description="Cultos, apelos e decisões" userName={profile.full_name} userRole={profile.role} />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[
             { label: 'Total de Cultos', value: appeals?.length || 0, icon: Calendar, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Total de Decisões', value: totalDecisions, icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50' },
@@ -57,13 +57,13 @@ export default async function ConselheirosPage() {
             const Icon = s.icon
             return (
               <Card key={s.label}>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className={`h-5 w-5 ${s.color}`} />
+                <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                  <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${s.color}`} />
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-slate-900">{s.value}</p>
-                    <p className="text-xs text-slate-500">{s.label}</p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-900 leading-none sm:leading-normal">{s.value}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 leading-tight mt-1 sm:mt-0">{s.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -89,7 +89,7 @@ export default async function ConselheirosPage() {
         {/* Actions */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-base font-semibold text-slate-900">Cultos Registrados</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Link href="/conselheiros/novo">
               <Button size="sm" variant="outline" className="gap-1.5">
                 <Heart className="h-4 w-4 text-pink-500" />
@@ -100,8 +100,32 @@ export default async function ConselheirosPage() {
           </div>
         </div>
 
-        {/* Appeals table */}
-        <Card>
+        {/* Celular: cultos em cartões */}
+        <div className="md:hidden space-y-2">
+          {appeals && appeals.length > 0 ? appeals.map(appeal => (
+            <Link key={appeal.id} href={`/conselheiros/${appeal.id}`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 active:bg-slate-50">
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-900 truncate">{appeal.name}</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {[formatDate(appeal.culto_date), appeal.culto_type ? cultoTypeLabels[appeal.culto_type] || appeal.culto_type : null, appeal.preacher].filter(Boolean).join(' · ')}
+                </p>
+                {appeal.theme && <p className="text-xs text-slate-400 truncate">{appeal.theme}</p>}
+              </div>
+              <Badge variant={appeal.total_decisions > 0 ? 'success' : 'outline'} className="flex-shrink-0">
+                {appeal.total_decisions} {appeal.total_decisions === 1 ? 'decisão' : 'decisões'}
+              </Badge>
+            </Link>
+          )) : (
+            <div className="rounded-xl border border-slate-200 bg-white py-12 text-center text-slate-400">
+              <Heart className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p>Nenhum culto registrado ainda</p>
+            </div>
+          )}
+        </div>
+
+        {/* Computador: tabela */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

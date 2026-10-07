@@ -28,7 +28,8 @@ function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    // Celular: painel que sobe de baixo. Computador: janela centralizada.
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
@@ -46,7 +47,7 @@ function DialogContent({ className, children, onClose, ...props }: DialogContent
   return (
     <div
       className={cn(
-        'relative mx-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl',
+        'relative mx-auto max-h-[92dvh] sm:max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl sm:rounded-xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-6 shadow-xl',
         className
       )}
       {...props}
@@ -54,9 +55,9 @@ function DialogContent({ className, children, onClose, ...props }: DialogContent
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+          className="absolute right-3 top-3 sm:right-4 sm:top-4 rounded-full p-1.5 sm:p-0 opacity-70 hover:opacity-100 transition-opacity"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5 sm:h-4 sm:w-4" />
           <span className="sr-only">Fechar</span>
         </button>
       )}
@@ -80,7 +81,7 @@ function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLPar
 function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6', className)}
+      className={cn('flex flex-col-reverse gap-2 sm:gap-0 sm:flex-row sm:justify-end sm:space-x-2 mt-6 [&>button]:h-11 sm:[&>button]:h-auto', className)}
       {...props}
     />
   )

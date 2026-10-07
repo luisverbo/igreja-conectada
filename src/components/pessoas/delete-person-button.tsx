@@ -47,7 +47,7 @@ export function DeletePersonButton({ personId, personName }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5">
+    <div className="flex items-center gap-2 flex-wrap rounded-lg border border-red-200 bg-red-50 px-3 py-1.5">
       <span className="text-sm text-red-700 font-medium">Apagar {personName}?</span>
       <button
         onClick={handleDelete}

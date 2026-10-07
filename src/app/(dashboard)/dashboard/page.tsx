@@ -94,7 +94,7 @@ export default async function DashboardPage() {
   const churchId = profile?.church_id
   if (!churchId) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-800">
           <h2 className="font-semibold mb-2">Perfil não configurado</h2>
           <p className="text-sm">Seu usuário não está vinculado a uma igreja. Contate o administrador.</p>

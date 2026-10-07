@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { getSessionProfile } from '@/lib/get-profile'
-import { Sidebar } from '@/components/layout/sidebar'
+import { Sidebar, MobileNav } from '@/components/layout/sidebar'
 import { MobileShell } from '@/components/layout/mobile-shell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -43,10 +43,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isSuperAdmin = role === 'super_admin' && user.email === SUPER_ADMIN_EMAIL
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    // Celular: a página rola normalmente (barra superior fixa + barra
+    // inferior). Computador (lg+): menu lateral fixo e só o conteúdo rola.
+    <div className="min-h-screen bg-slate-50 lg:flex lg:h-screen lg:overflow-hidden">
       <Sidebar role={role} isSuperAdmin={isSuperAdmin} customAccess={profile?.custom_access || []} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
+      <MobileNav role={role} isSuperAdmin={isSuperAdmin} customAccess={profile?.custom_access || []} />
+      <div className="flex flex-1 flex-col lg:overflow-hidden min-w-0">
+        <main className="flex-1 lg:overflow-y-auto pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
         </main>
       </div>

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 
@@ -10,6 +10,13 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: 'Igreja Conectada',
   description: 'Sistema de Gestão de Jornada Espiritual',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#1e0a3c',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

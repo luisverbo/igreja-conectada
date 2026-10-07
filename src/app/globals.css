@@ -25,6 +25,15 @@
   --sidebar-border: #4c2889;
 }
 
+/* Margem interna dos cartões: menor no celular. Fica na camada de
+   componentes, então utilitários como p-0 / pt-0 continuam valendo. */
+@layer components {
+  .card-pad { padding: 1rem; }
+  @media (min-width: 640px) {
+    .card-pad { padding: 1.5rem; }
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -35,7 +44,13 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iPhone dá zoom em campos com fonte < 16px — no celular usamos 16px */
+@media (max-width: 1023px) {
+  input:not([type='checkbox']):not([type='radio']), select, textarea { font-size: 16px !important; }
 }
 
 * {

@@ -133,7 +133,7 @@ export default async function DiscipuladosPage() {
     <div>
       <Header title="GCA" description="Grupos de Crescimento e Acompanhamento" userName={profile.full_name} userRole={profile.role} />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         {/* Info banner */}
         <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 flex items-start gap-3">
           <Home className="h-5 w-5 text-violet-500 flex-shrink-0 mt-0.5" />
@@ -217,7 +217,7 @@ export default async function DiscipuladosPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[
             { label: 'GCAs Ativos', value: activeGroups.length, icon: Home, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Pessoas em GCA', value: totalMembers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -226,13 +226,13 @@ export default async function DiscipuladosPage() {
             const Icon = s.icon
             return (
               <Card key={s.label}>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className={`h-5 w-5 ${s.color}`} />
+                <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                  <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${s.color}`} />
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-slate-900">{s.value}</p>
-                    <p className="text-xs text-slate-500">{s.label}</p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-900 leading-none sm:leading-normal">{s.value}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 leading-tight mt-1 sm:mt-0">{s.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -298,8 +298,53 @@ export default async function DiscipuladosPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <Card>
+        {/* Celular: GCAs em cartões */}
+        <div className="md:hidden space-y-2">
+          {discipleships && discipleships.length > 0 ? discipleships.map((d: any) => {
+            const cap = capMap[d.id]
+            const leaders = leadersShort(d)
+            return (
+              <div key={d.id} className={`rounded-xl border bg-white ${cap.state === 'acima' ? 'border-red-200' : 'border-slate-200'}`}>
+                <Link href={`/discipulados/${d.id}`} className="block p-3.5 active:bg-slate-50 rounded-t-xl">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-slate-900">{d.name}</p>
+                    <Badge variant={d.status === 'ativo' ? 'success' : 'outline'} className="text-[10px] flex-shrink-0">
+                      {d.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </div>
+                  {leaders && <p className="text-sm text-slate-600 mt-0.5">{leaders.includes('&') ? '👫 ' : '👤 '}{leaders}</p>}
+                  <p className="text-xs text-slate-500 mt-1">
+                    {[
+                      d.location ? `${d.location.location_type === 'igreja' ? '⛪' : '🏠'} ${d.location.name}` : d.neighborhood,
+                      d.day_of_week ? `${dayLabels[d.day_of_week]} ${d.time_start ? d.time_start.slice(0, 5) : ''}` : null,
+                    ].filter(Boolean).join(' · ')}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <Badge variant={cap.state === 'acima' ? 'destructive' : cap.state === 'lotado' || cap.state === 'quase' ? 'warning' : 'secondary'}>
+                      👥 {cap.count}{cap.limit != null ? `/${cap.limit}` : ''} {cap.limit == null ? (cap.count === 1 ? 'membro' : 'membros') : ''}
+                    </Badge>
+                    {cap.state === 'acima' && <span className="text-xs font-semibold text-red-600">{cap.over} acima do limite</span>}
+                    {careMap[d.id] > 0 && <Badge variant="warning">{careMap[d.id]} precisam de cuidado</Badge>}
+                  </div>
+                </Link>
+                {canManageDept && (
+                  <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-3 py-1.5">
+                    <EditDiscipleshipDialog discipleship={d} compact />
+                    <DeleteGcaButton gcaId={d.id} gcaName={d.name} memberCount={memberMap[d.id] || 0} compact />
+                  </div>
+                )}
+              </div>
+            )
+          }) : (
+            <div className="rounded-xl border border-slate-200 bg-white py-12 text-center text-slate-400">
+              <Home className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p>Nenhum GCA cadastrado</p>
+            </div>
+          )}
+        </div>
+
+        {/* Computador: tabela */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

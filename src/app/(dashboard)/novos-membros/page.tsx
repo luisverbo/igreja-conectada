@@ -63,9 +63,10 @@ export default async function NovosMembrosPage() {
     <div>
       <Header title="Novos Membros" description="Turmas, matrículas e controle de presença" userName={profile.full_name} userRole={profile.role} />
 
-      <div className="p-6 space-y-6">
+      {/* No celular as turmas sobem para logo depois dos números */}
+      <div className="p-4 sm:p-6 flex flex-col gap-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="max-lg:-order-2 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: 'Turmas Ativas', value: activeClasses.length, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Alunos Matriculados', value: totalEnrolled, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
@@ -75,13 +76,13 @@ export default async function NovosMembrosPage() {
             const Icon = s.icon
             return (
               <Card key={s.label}>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className={`h-5 w-5 ${s.color}`} />
+                <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                  <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${s.color}`} />
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-slate-900">{s.value}</p>
-                    <p className="text-xs text-slate-500">{s.label}</p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-900 leading-none sm:leading-normal">{s.value}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 leading-tight mt-1 sm:mt-0">{s.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -143,16 +144,59 @@ export default async function NovosMembrosPage() {
           <TeachersSection churchId={profile.church_id} canEdit={[...FULL_ACCESS, 'new_members_leader', 'new_members_teacher'].includes(profile.role)} />
         )}
 
+        <div className="max-lg:-order-1 space-y-4">
         {/* Actions */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-slate-900">Turmas</h2>
           {[...FULL_ACCESS, 'new_members_leader', 'new_members_teacher'].includes(profile.role) && (
             <NewClassDialog churchId={profile.church_id} userId={profile.id} />
           )}
         </div>
 
-        {/* Classes table */}
-        <Card>
+        {/* Celular: turmas em cartões */}
+        <div className="md:hidden space-y-2">
+          {classes && classes.length > 0 ? classes.map(cls => (
+            <div key={cls.id} className="rounded-xl border border-slate-200 bg-white">
+              <Link href={`/novos-membros/turmas/${cls.id}`} className="block p-3.5 active:bg-slate-50 rounded-t-xl">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-slate-900">{cls.name}</p>
+                  <Badge variant={cls.status === 'ativa' ? 'success' : cls.status === 'concluida' ? 'info' : 'outline'} className="flex-shrink-0">
+                    {cls.status === 'ativa' ? 'Ativa' : cls.status === 'concluida' ? 'Concluída' : 'Cancelada'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {[
+                    cls.day_of_week ? `${dayLabels[cls.day_of_week] || cls.day_of_week}${cls.time_start ? ' ' + cls.time_start.slice(0, 5) : ''}` : null,
+                    cls.location,
+                    cls.teacher?.name ? `Prof. ${cls.teacher.name}` : null,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <Badge variant="secondary">{countMap[cls.id] || 0} aluno(s)</Badge>
+                  <span className="text-xs text-slate-500">{cls.total_lessons} aulas</span>
+                  {cls.status === 'ativa' && (
+                    <span className={`text-[11px] font-semibold ${cls.enrollment_open ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {cls.enrollment_open ? '🟢 Inscrições abertas' : '🔒 Inscrições fechadas'}
+                    </span>
+                  )}
+                </div>
+              </Link>
+              {cls.registration_token && cls.status === 'ativa' && cls.enrollment_open && (
+                <div className="border-t border-slate-100 px-3 py-1.5">
+                  <CopyLinkButton token={cls.registration_token} />
+                </div>
+              )}
+            </div>
+          )) : (
+            <div className="rounded-xl border border-slate-200 bg-white py-12 text-center text-slate-400">
+              <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p>Nenhuma turma cadastrada</p>
+            </div>
+          )}
+        </div>
+
+        {/* Computador: tabela */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
@@ -231,6 +275,7 @@ export default async function NovosMembrosPage() {
             </Table>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )

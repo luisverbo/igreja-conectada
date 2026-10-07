@@ -212,7 +212,59 @@ export default async function TurmaPage({ params }: { params: Promise<{ id: stri
               Lista de Alunos
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
+          {/* Celular: um bloco por aluno */}
+          <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+            {enrollments.map((e: any) => {
+              const presence = presenceMap[e.id]
+              const pct = presence?.total > 0 ? Math.round((presence.present / presence.total) * 100) : 0
+              const ficha = fichaByPerson[e.people?.id]
+              return (
+                <div key={e.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Link href={`/pessoas/${e.people?.id}`} className="font-semibold text-slate-900 block truncate">{e.people?.full_name}</Link>
+                      {e.people?.phone && <p className="text-xs text-slate-400">{e.people.phone}</p>}
+                    </div>
+                    {ficha ? (
+                      <Link href={`/novos-membros/fichas/${ficha.id}`}
+                        className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-1 text-xs font-semibold">
+                        <FileText className="h-3 w-3" /> Ficha
+                      </Link>
+                    ) : (
+                      <span className="flex-shrink-0 rounded-full bg-slate-100 text-slate-400 px-2.5 py-1 text-xs font-medium">Ficha pendente</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 flex-1 rounded-full bg-slate-100">
+                      <div className={`h-1.5 rounded-full ${pct >= 75 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs text-slate-600 flex-shrink-0">{presence?.present || 0}/{presence?.total || 0} presenças</span>
+                    {presence?.credited > 0 && <span className="text-[10px] text-amber-600 font-semibold">+{presence.credited} reap.</span>}
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <MarkStudentCompleteButton enrollmentId={e.id} personId={e.people?.id} completed={e.completed} />
+                    {e.completed && profile && ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'new_members_leader'].includes(profile.role) && (
+                      <EncaminharDialog
+                        personId={e.people?.id}
+                        personName={e.people?.full_name}
+                        personLat={e.people?.latitude ?? null}
+                        personLng={e.people?.longitude ?? null}
+                        churchId={profile.church_id}
+                        trigger="link"
+                        label="→ GCA"
+                      />
+                    )}
+                    {turma.status === 'ativa' && (
+                      <RemoveEnrollmentButton enrollmentId={e.id} personId={e.people?.id} personName={e.people?.full_name} />
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Computador: tabela */}
+          <CardContent className="p-0 overflow-x-auto hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
