@@ -40,14 +40,25 @@ function makeBubbleIcon(count: number, radius: number) {
   })
 }
 
-function makeCellIcon(leaderName: string | null) {
+type CapState = 'sem_limite' | 'ok' | 'quase' | 'lotado' | 'acima'
+
+// Cor da casinha conforme a lotação: roxo normal, laranja lotado, vermelho acima
+const CAP_COLOR: Record<CapState, string> = {
+  sem_limite: '#7c3aed', ok: '#7c3aed', quase: '#7c3aed', lotado: '#ea580c', acima: '#dc2626',
+}
+
+function makeCellIcon(leaderName: string | null, state: CapState = 'sem_limite', over = 0) {
+  const color = CAP_COLOR[state]
+  const overHtml = state === 'acima' && over > 0
+    ? `<div style="position:absolute;top:-9px;right:-22px;background:#dc2626;color:white;border:2px solid white;border-radius:9px;padding:0 5px;font-size:10px;font-weight:800;line-height:15px;box-shadow:0 1px 3px rgba(0,0,0,0.3);">+${over}</div>`
+    : ''
   const nameHtml = leaderName
-    ? `<div style="background:rgba(109,40,217,0.92);color:white;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;white-space:nowrap;margin-top:2px;box-shadow:0 1px 3px rgba(0,0,0,0.25);max-width:110px;overflow:hidden;text-overflow:ellipsis;">${leaderName}</div>`
+    ? `<div style="background:${state === 'acima' ? 'rgba(220,38,38,0.95)' : 'rgba(109,40,217,0.92)'};color:white;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;white-space:nowrap;margin-top:2px;box-shadow:0 1px 3px rgba(0,0,0,0.25);max-width:110px;overflow:hidden;text-overflow:ellipsis;">${leaderName}</div>`
     : ''
   return L.divIcon({
     className: '',
     html: `<div style="display:flex;flex-direction:column;align-items:center;">
-      <div style="background:#7c3aed;width:30px;height:30px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;">🏠</div>
+      <div style="position:relative;background:${color};width:30px;height:30px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;">🏠${overHtml}</div>
       ${nameHtml}
     </div>`,
     iconSize: [120, 52],
@@ -70,6 +81,9 @@ export interface DiscipleshipMarker {
   time_start: string | null
   meeting_frequency: string | null
   member_count: number
+  capacity_limit: number | null
+  capacity_over: number
+  capacity_state: CapState
   latitude: number
   longitude: number
 }
@@ -218,7 +232,7 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
           ))}
 
           {showCells && discipleships.map(d => (
-            <Marker key={`d-${d.id}`} position={[d.latitude, d.longitude]} icon={makeCellIcon(d.leader_name)}>
+            <Marker key={`d-${d.id}`} position={[d.latitude, d.longitude]} icon={makeCellIcon(d.leader_name, d.capacity_state, d.capacity_over)}>
               <Popup maxWidth={280}>
                 <div className="text-sm space-y-1" style={{ minWidth: 200 }}>
                   <p className="font-bold text-violet-800 text-base leading-tight">🏠 {d.name}</p>
@@ -248,7 +262,12 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
                     </p>
                   )}
 
-                  <p className="text-slate-600">👥 {d.member_count} {d.member_count === 1 ? 'membro' : 'membros'}</p>
+                  <p className={d.capacity_state === 'acima' ? 'text-red-600 font-semibold' : d.capacity_state === 'lotado' ? 'text-orange-600 font-semibold' : 'text-slate-600'}>
+                    👥 {d.member_count} {d.member_count === 1 ? 'membro' : 'membros'}
+                    {d.capacity_limit != null && ` / limite ${d.capacity_limit}`}
+                    {d.capacity_state === 'acima' && ` — ${d.capacity_over} acima do limite`}
+                    {d.capacity_state === 'lotado' && ' — lotado'}
+                  </p>
 
                   <a
                     href={`/discipulados/${d.id}`}
@@ -262,6 +281,16 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
           ))}
         </MapContainer>
       </div>
+
+      {/* Legenda da lotação dos GCAs */}
+      {showCells && discipleships.some(d => d.capacity_limit != null) && (
+        <div className="flex items-center gap-4 flex-wrap text-xs text-slate-500">
+          <span className="font-medium text-slate-600">GCAs:</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full" style={{ background: '#7c3aed' }} /> dentro do limite</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full" style={{ background: '#ea580c' }} /> lotado</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full" style={{ background: '#dc2626' }} /> acima do limite (+N = excedentes)</span>
+        </div>
+      )}
 
       {/* Legenda de cores */}
       {activeTab !== 'celulas' && hasGroups && (

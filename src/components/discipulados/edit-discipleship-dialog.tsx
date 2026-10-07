@@ -31,6 +31,7 @@ interface Discipleship {
   meeting_frequency: string | null
   notes: string | null
   status: string
+  max_members?: number | null
 }
 
 interface Props {
@@ -66,6 +67,7 @@ export function EditDiscipleshipDialog({ discipleship, compact }: Props) {
     meeting_frequency: discipleship.meeting_frequency || 'semanal',
     notes: discipleship.notes || '',
     status: discipleship.status,
+    max_members: discipleship.max_members ? String(discipleship.max_members) : '',
   })
 
   function set(k: string, v: string) { setForm(p => ({ ...p, [k]: v })) }
@@ -153,6 +155,7 @@ export function EditDiscipleshipDialog({ discipleship, compact }: Props) {
         meeting_frequency: form.meeting_frequency,
         notes: form.notes.trim() || null,
         status: form.status,
+        max_members: parseInt(form.max_members, 10) > 0 ? parseInt(form.max_members, 10) : null,
         ...(latitude !== undefined ? { latitude, longitude } : {}),
         ...locationOverride,
       })
@@ -288,6 +291,10 @@ export function EditDiscipleshipDialog({ discipleship, compact }: Props) {
                   <option value="mensal">Mensal</option>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Limite de participantes <span className="text-slate-400 font-normal text-xs">(vazio = usa o limite padrão)</span></Label>
+              <Input type="number" min={1} inputMode="numeric" value={form.max_members} onChange={e => set('max_members', e.target.value)} placeholder="Ex: 20" />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

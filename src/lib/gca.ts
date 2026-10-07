@@ -29,3 +29,33 @@ export function leadersFull(gca: GcaLike): string | null {
   const names = leaderNames(gca)
   return names.length > 0 ? names.join(' & ') : null
 }
+
+// ── Limite de participantes ──────────────────────────────────────────
+
+export interface GcaCapacity {
+  /** Limite que vale para o GCA (próprio ou padrão da igreja); null = sem limite */
+  limit: number | null
+  count: number
+  /** Quantos passaram do limite (0 quando dentro) */
+  over: number
+  /** Vagas restantes (null quando não há limite) */
+  free: number | null
+  state: 'sem_limite' | 'ok' | 'quase' | 'lotado' | 'acima'
+}
+
+/**
+ * Lotação de um GCA. O limite próprio do GCA sobrepõe o padrão da
+ * igreja. "quase" = 90% ou mais do limite.
+ */
+export function gcaCapacity(
+  ownLimit: number | null | undefined,
+  defaultLimit: number | null | undefined,
+  count: number,
+): GcaCapacity {
+  const limit = ownLimit || defaultLimit || null
+  if (!limit) return { limit: null, count, over: 0, free: null, state: 'sem_limite' }
+  const over = Math.max(0, count - limit)
+  const free = Math.max(0, limit - count)
+  const state = count > limit ? 'acima' : count === limit ? 'lotado' : count >= limit * 0.9 ? 'quase' : 'ok'
+  return { limit, count, over, free, state }
+}

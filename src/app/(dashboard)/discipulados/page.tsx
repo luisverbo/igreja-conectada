@@ -18,7 +18,8 @@ import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
 import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { leadersShort } from '@/lib/gca'
+import { leadersShort, gcaCapacity, type GcaCapacity } from '@/lib/gca'
+import { CapacityDialog, type CapacityGca } from '@/components/discipulados/capacity-dialog'
 
 export default async function DiscipuladosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -57,12 +58,10 @@ export default async function DiscipuladosPage() {
   }
 
   // Link geral de cadastro dos GCAs (a pessoa escolhe o GCA)
-  let churchSignupToken: string | null = null
-  if (canManageDept) {
-    const { data: ch } = await supabase
-      .from('churches').select('gca_signup_token').eq('id', profile.church_id).single()
-    churchSignupToken = ch?.gca_signup_token ?? null
-  }
+  const { data: churchRow } = await supabase
+    .from('churches').select('gca_signup_token, gca_default_max_members').eq('id', profile.church_id).single()
+  const churchSignupToken: string | null = canManageDept ? churchRow?.gca_signup_token ?? null : null
+  const defaultLimit: number | null = churchRow?.gca_default_max_members ?? null
   const signupLinks: GcaLinkItem[] = (discipleships || [])
     .filter((d: any) => d.status === 'ativo')
     .map((d: any) => ({
@@ -112,6 +111,14 @@ export default async function DiscipuladosPage() {
       careMap[m.discipleship_id] = (careMap[m.discipleship_id] || 0) + 1
     }
   })
+
+  // Lotação de cada GCA (limite próprio ou padrão da igreja)
+  const capMap: Record<string, GcaCapacity> = {}
+  discipleships?.forEach((d: any) => { capMap[d.id] = gcaCapacity(d.max_members, defaultLimit, memberMap[d.id] || 0) })
+  const overGcas = (discipleships || []).filter((d: any) => d.status === 'ativo' && capMap[d.id].state === 'acima')
+  const capacityGcas: CapacityGca[] = (discipleships || [])
+    .filter((d: any) => d.status === 'ativo')
+    .map((d: any) => ({ id: d.id, name: d.name, leaders: leadersShort(d), max_members: d.max_members ?? null, count: memberMap[d.id] || 0 }))
 
   const totalMembers = Object.values(memberMap).reduce((a, b) => a + b, 0)
   const totalNeedCare = Object.values(careMap).reduce((a, b) => a + b, 0)
@@ -251,10 +258,31 @@ export default async function DiscipuladosPage() {
           </div>
         )}
 
+        {/* GCAs acima do limite */}
+        {overGcas.length > 0 && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-semibold text-red-800">
+              🔴 {overGcas.length} GCA{overGcas.length === 1 ? ' está' : 's estão'} acima do limite de participantes
+            </p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {overGcas.map((d: any) => (
+                <Link key={d.id} href={`/discipulados/${d.id}`}
+                  className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100">
+                  {d.name} · {capMap[d.id].count}/{capMap[d.id].limit} (+{capMap[d.id].over})
+                </Link>
+              ))}
+            </div>
+            <p className="text-xs text-red-600 mt-2">Abra o GCA para ver sugestões de GCAs próximos com vaga e transferir os membros excedentes.</p>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-base font-semibold text-slate-900">GCAs</h2>
           <div className="flex items-center gap-2 flex-wrap">
+            {canManageDept && (
+              <CapacityDialog churchId={profile.church_id} defaultLimit={defaultLimit} gcas={capacityGcas} />
+            )}
             {canManageDept && churchSignupToken && (
               <SignupLinksDialog churchToken={churchSignupToken} gcas={signupLinks} />
             )}
@@ -323,7 +351,19 @@ export default async function DiscipuladosPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{memberMap[d.id] || 0}</Badge>
+                        {(() => {
+                          const cap = capMap[d.id]
+                          if (cap.limit == null) return <Badge variant="secondary">{cap.count}</Badge>
+                          return (
+                            <div className="flex flex-col items-start gap-0.5">
+                              <Badge variant={cap.state === 'acima' ? 'destructive' : cap.state === 'lotado' || cap.state === 'quase' ? 'warning' : 'secondary'}>
+                                {cap.count}/{cap.limit}
+                              </Badge>
+                              {cap.state === 'acima' && <span className="text-[11px] font-semibold text-red-600">{cap.over} acima</span>}
+                              {cap.state === 'lotado' && <span className="text-[11px] text-amber-600">lotado</span>}
+                            </div>
+                          )
+                        })()}
                       </TableCell>
                       <TableCell>
                         {careMap[d.id] > 0 ? (

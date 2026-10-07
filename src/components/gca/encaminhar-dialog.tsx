@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Home, X, Loader2, MapPin, Check, Navigation } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { sortByProximity, formatKm } from '@/lib/geo'
-import { leadersShort } from '@/lib/gca'
+import { leadersShort, gcaCapacity } from '@/lib/gca'
 
 interface Props {
   personId: string
@@ -16,9 +16,11 @@ interface Props {
   trigger?: 'button' | 'link'
   label?: string
   onDone?: () => void
+  /** GCA atual da pessoa — fica fora da lista (usado ao transferir) */
+  excludeGcaId?: string
 }
 
-export function EncaminharDialog({ personId, personName, personLat, personLng, churchId, trigger = 'button', label = 'Encaminhar ao GCA', onDone }: Props) {
+export function EncaminharDialog({ personId, personName, personLat, personLng, churchId, trigger = 'button', label = 'Encaminhar ao GCA', onDone, excludeGcaId }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [gcas, setGcas] = useState<any[]>([])
@@ -30,17 +32,31 @@ export function EncaminharDialog({ personId, personName, personLat, personLng, c
   useEffect(() => {
     if (!open) return
     const supabase = createClient()
-    supabase
-      .from('discipleships')
-      .select('id, name, latitude, longitude, location:gca_locations(name, host_name, neighborhood, city), leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), leader_name, leader2_name')
-      .eq('church_id', churchId)
-      .eq('status', 'ativo')
-      .then(({ data }) => {
-        const sorted = sortByProximity(data || [], personLat, personLng)
-        setGcas(sorted)
-        if (sorted[0]) setSelected(sorted[0].id)
-      })
-  }, [open, churchId, personLat, personLng])
+    Promise.all([
+      supabase
+        .from('discipleships')
+        .select('id, name, latitude, longitude, max_members, location:gca_locations(name, host_name, neighborhood, city), leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), leader_name, leader2_name')
+        .eq('church_id', churchId)
+        .eq('status', 'ativo'),
+      supabase.from('churches').select('gca_default_max_members').eq('id', churchId).single(),
+      supabase
+        .from('discipleship_members')
+        .select('discipleship_id, discipleships!inner(church_id)')
+        .eq('discipleships.church_id', churchId)
+        .neq('status', 'inativo'),
+    ]).then(([{ data }, { data: church }, { data: rows }]) => {
+      const counts: Record<string, number> = {}
+      rows?.forEach((r: any) => { counts[r.discipleship_id] = (counts[r.discipleship_id] || 0) + 1 })
+      const withCap = (data || [])
+        .filter((g: any) => g.id !== excludeGcaId)
+        .map((g: any) => ({ ...g, cap: gcaCapacity(g.max_members, church?.gca_default_max_members, counts[g.id] || 0) }))
+      const sorted = sortByProximity(withCap, personLat, personLng)
+      setGcas(sorted)
+      // Pré-seleciona o mais próximo que ainda tem vaga
+      const firstFree = sorted.find(g => g.cap.free == null || g.cap.free > 0) || sorted[0]
+      if (firstFree) setSelected(firstFree.id)
+    })
+  }, [open, churchId, personLat, personLng, excludeGcaId])
 
   async function submit() {
     if (!selected) return
@@ -122,6 +138,13 @@ export function EncaminharDialog({ personId, personName, personLat, personLng, c
                             <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">{formatKm(g.distanceKm)}</span>
                           )}
                         </div>
+                        {g.cap?.limit != null && (
+                          <p className={`text-[11px] font-semibold mt-0.5 ${
+                            g.cap.state === 'acima' || g.cap.state === 'lotado' ? 'text-red-600' : g.cap.state === 'quase' ? 'text-amber-600' : 'text-emerald-600'
+                          }`}>
+                            {g.cap.count}/{g.cap.limit} · {g.cap.state === 'acima' ? `${g.cap.over} acima do limite` : g.cap.state === 'lotado' ? 'lotado' : `${g.cap.free} vaga${g.cap.free === 1 ? '' : 's'}`}
+                          </p>
+                        )}
                         <p className="text-xs text-slate-500 mt-0.5">
                           {[leadersLabel ? (leadersLabel.includes('&') ? `👫 ${leadersLabel}` : leadersLabel) : null, g.location?.neighborhood || g.location?.name].filter(Boolean).join(' · ')}
                         </p>

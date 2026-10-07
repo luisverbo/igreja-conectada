@@ -14,7 +14,9 @@ import { EditDiscipleshipDialog } from '@/components/discipulados/edit-disciples
 import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
 import { ObservationEditButton } from '@/components/discipulados/observation-edit-button'
 import { GcaSurveysCard } from '@/components/gca/gca-surveys-card'
-import { leadersFull, leaderNames } from '@/lib/gca'
+import { leadersFull, leaderNames, leadersShort, gcaCapacity } from '@/lib/gca'
+import { haversineKm, formatKm } from '@/lib/geo'
+import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
 import { GcaSignupLinkCard } from '@/components/discipulados/signup-links-dialog'
 
@@ -41,7 +43,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
       .eq('id', id)
       .single(),
     supabase.from('discipleship_members')
-      .select('*, people(id, full_name, phone, status), discipleship_observations(id, observation_type, description, needs_care, observation_date, profiles(full_name))')
+      .select('*, people(id, full_name, phone, status, latitude, longitude), discipleship_observations(id, observation_type, description, needs_care, observation_date, profiles(full_name))')
       .eq('discipleship_id', id)
       .order('status')
       .order('created_at')
@@ -81,6 +83,42 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
   const activeMembers = members?.filter(m => m.status !== 'inativo') || []
   const needCare = members?.filter(m => m.status === 'em_acompanhamento' || m.status === 'situacao_sensivel') || []
   const liberadosServir = members?.filter(m => m.status === 'liberado_para_servir') || []
+
+  // ── Lotação: limite próprio ou padrão da igreja ──
+  const isManager = !!profile && [...FULL_ACCESS, 'discipleship_supervisor'].includes(profile.role)
+  const { data: churchRow } = await supabase
+    .from('churches').select('gca_default_max_members').eq('id', discipleship.church_id).single()
+  const defaultLimit = churchRow?.gca_default_max_members ?? null
+  const cap = gcaCapacity(discipleship.max_members, defaultLimit, activeMembers.length)
+
+  // Acima do limite → sugere GCAs próximos (a partir deste GCA) que têm vaga
+  let suggestions: { id: string; name: string; leaders: string | null; free: number | null; distanceKm: number | null }[] = []
+  if (cap.state === 'acima' && isManager) {
+    const [{ data: others }, { data: otherRows }] = await Promise.all([
+      supabase.from('discipleships')
+        .select('id, name, latitude, longitude, max_members, leader_name, leader2_name, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name)')
+        .eq('church_id', discipleship.church_id)
+        .eq('status', 'ativo')
+        .neq('id', id),
+      supabase.from('discipleship_members')
+        .select('discipleship_id, discipleships!inner(church_id)')
+        .eq('discipleships.church_id', discipleship.church_id)
+        .neq('status', 'inativo'),
+    ])
+    const counts: Record<string, number> = {}
+    otherRows?.forEach((r: any) => { counts[r.discipleship_id] = (counts[r.discipleship_id] || 0) + 1 })
+    suggestions = (others || [])
+      .map((g: any) => {
+        const c = gcaCapacity(g.max_members, defaultLimit, counts[g.id] || 0)
+        const distanceKm = discipleship.latitude != null && g.latitude != null
+          ? haversineKm(discipleship.latitude, discipleship.longitude, g.latitude, g.longitude)
+          : null
+        return { id: g.id, name: g.name, leaders: leadersShort(g), free: c.free, distanceKm }
+      })
+      .filter(g => g.free == null || g.free > 0)
+      .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+      .slice(0, 4)
+  }
 
   const dayLabels: Record<string, string> = {
     domingo: 'Domingo', segunda: 'Segunda-feira', terca: 'Terça-feira',
@@ -165,6 +203,42 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
           <GcaSignupLinkCard gcaName={discipleship.name} token={discipleship.signup_token} />
         )}
 
+        {/* Limite de participantes */}
+        {cap.state === 'acima' && (
+          <div className="rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-bold text-red-800">
+              🔴 {cap.over} acima do limite — {cap.count} membros para um limite de {cap.limit}
+            </p>
+            {isManager && (
+              suggestions.length > 0 ? (
+                <>
+                  <p className="text-xs text-red-700 mt-1.5 mb-2">GCAs mais próximos com vaga — use <strong>Transferir</strong> no membro para movê-lo:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map(sg => (
+                      <Link key={sg.id} href={`/discipulados/${sg.id}`}
+                        className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs hover:bg-emerald-50">
+                        <span className="font-semibold text-slate-800">{sg.name}</span>
+                        {sg.leaders && <span className="text-slate-500"> · {sg.leaders}</span>}
+                        <span className="block text-emerald-700 font-semibold">
+                          {sg.free == null ? 'sem limite' : `${sg.free} vaga${sg.free === 1 ? '' : 's'}`}
+                          {sg.distanceKm != null && ` · ${formatKm(sg.distanceKm)} daqui`}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-red-700 mt-1.5">Nenhum outro GCA ativo tem vaga no momento.</p>
+              )
+            )}
+          </div>
+        )}
+        {(cap.state === 'lotado' || cap.state === 'quase') && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
+            {cap.state === 'lotado' ? `🟠 GCA lotado — ${cap.count}/${cap.limit} participantes` : `🟡 Quase lotado — ${cap.count}/${cap.limit} (${cap.free} vaga${cap.free === 1 ? '' : 's'})`}
+          </div>
+        )}
+
         {/* Notice - no attendance */}
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <p className="text-sm font-medium text-amber-800">Foco em Cuidado Pastoral</p>
@@ -174,7 +248,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Membros Ativos', value: activeMembers.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
+            { label: cap.limit ? `Membros Ativos (limite ${cap.limit})` : 'Membros Ativos', value: activeMembers.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Em Acompanhamento', value: needCare.length, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
             { label: 'Liberados p/ Servir', value: liberadosServir.length, icon: Star, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           ].map(s => {
@@ -272,6 +346,18 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                               Perfil
                             </Button>
                           </Link>
+                          {isManager && member.status !== 'inativo' && member.people?.id && (
+                            <EncaminharDialog
+                              personId={member.people.id}
+                              personName={member.people.full_name}
+                              personLat={member.people.latitude ?? null}
+                              personLng={member.people.longitude ?? null}
+                              churchId={discipleship.church_id}
+                              excludeGcaId={id}
+                              trigger="link"
+                              label="Transferir"
+                            />
+                          )}
                           {profile && (
                             <RemoveMemberButton
                               memberId={member.id}

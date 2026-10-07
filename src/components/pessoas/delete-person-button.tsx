@@ -21,9 +21,15 @@ export function DeletePersonButton({ personId, personName }: Props) {
     setLoading(true)
     setError(null)
     const supabase = createClient()
-    const { error: err } = await supabase.from('people').delete().eq('id', personId)
+    const { data, error: err } = await supabase.from('people').delete().eq('id', personId).select('id')
     if (err) {
-      setError('Erro ao apagar. Tente novamente.')
+      setError(`Erro ao apagar: ${err.message}`)
+      setLoading(false)
+      return
+    }
+    // Sem erro e sem linha apagada = a regra de acesso barrou (só liderança apaga)
+    if (!data || data.length === 0) {
+      setError('Você não tem permissão para apagar pessoas.')
       setLoading(false)
       return
     }

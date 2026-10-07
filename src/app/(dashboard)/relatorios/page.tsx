@@ -8,7 +8,7 @@ import { ChartsSection } from '@/components/relatorios/charts-section'
 import { MapSection } from '@/components/relatorios/map-section'
 import { NeighborhoodFilter } from '@/components/relatorios/neighborhood-filter'
 import Link from 'next/link'
-import { leadersShort } from '@/lib/gca'
+import { leadersShort, gcaCapacity } from '@/lib/gca'
 
 export default async function RelatoriosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -43,7 +43,7 @@ export default async function RelatoriosPage() {
       .limit(24),
     supabase
       .from('discipleships')
-      .select('id, name, status, day_of_week, time_start, meeting_frequency, address, neighborhood, city, latitude, longitude, leader_name, leader2_name, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name, host_phone)')
+      .select('id, name, status, max_members, day_of_week, time_start, meeting_frequency, address, neighborhood, city, latitude, longitude, leader_name, leader2_name, leader:profiles!discipleships_leader_id_fkey(full_name), leader2:profiles!discipleships_leader2_id_fkey(full_name), supervisor:profiles!discipleships_supervisor_id_fkey(full_name), location:gca_locations(name, location_type, host_name, host_phone)')
       .eq('church_id', cid),
     supabase
       .from('discipleship_members')
@@ -293,6 +293,8 @@ export default async function RelatoriosPage() {
     }))
 
   // Só células ATIVAS no mapa, com o card completo no clique
+  const { data: churchCap } = await supabase
+    .from('churches').select('gca_default_max_members').eq('id', cid).single()
   const gcaMemberCount: Record<string, number> = {}
   discipleshipMembers?.forEach((m: any) => {
     if (m.status !== 'inativo') gcaMemberCount[m.discipleship_id] = (gcaMemberCount[m.discipleship_id] || 0) + 1
@@ -315,6 +317,10 @@ export default async function RelatoriosPage() {
         time_start: d.time_start ? String(d.time_start).slice(0, 5) : null,
         meeting_frequency: d.meeting_frequency ?? null,
         member_count: gcaMemberCount[d.id] || 0,
+        ...(() => {
+          const c = gcaCapacity(d.max_members, churchCap?.gca_default_max_members, gcaMemberCount[d.id] || 0)
+          return { capacity_limit: c.limit, capacity_over: c.over, capacity_state: c.state }
+        })(),
         latitude: d.latitude as number,
         longitude: d.longitude as number,
       }
