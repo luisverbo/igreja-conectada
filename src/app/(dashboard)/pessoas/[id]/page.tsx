@@ -189,10 +189,12 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                     </dd>
                   </div>
                 )}
-                {person.rhema_graduated != null && (
+                {person.rhema_status && (
                   <div className="flex justify-between">
-                    <dt className="text-slate-500">Formado no RHEMA</dt>
-                    <dd className={person.rhema_graduated ? 'text-indigo-700 font-semibold' : 'text-slate-700'}>{person.rhema_graduated ? '🎓 Sim' : 'Não'}</dd>
+                    <dt className="text-slate-500">RHEMA</dt>
+                    <dd className={person.rhema_status === 'formado' ? 'text-indigo-700 font-semibold' : person.rhema_status === 'cursando' ? 'text-sky-700 font-semibold' : 'text-slate-700'}>
+                      {person.rhema_status === 'formado' ? '🎓 Formado(a)' : person.rhema_status === 'cursando' ? '📖 Cursando' : 'Não fez'}
+                    </dd>
                   </div>
                 )}
                 {person.profession && (

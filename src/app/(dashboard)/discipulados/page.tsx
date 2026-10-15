@@ -112,11 +112,17 @@ export default async function DiscipuladosPage() {
 
   // Formados no RHEMA por GCA (coluna da migration 013 — sem ela, conta 0)
   const { data: rhemaRows } = await supabase
-    .from('people').select('id').eq('church_id', profile.church_id).eq('rhema_graduated', true)
-  const rhemaIds = new Set((rhemaRows || []).map(r => r.id))
+    .from('people').select('id, rhema_status').eq('church_id', profile.church_id).in('rhema_status', ['formado', 'cursando'])
+  const rhemaById = new Map((rhemaRows || []).map(r => [r.id, r.rhema_status as string]))
   const rhemaMap: Record<string, number> = {}
-  memberCounts?.forEach(m => { if (rhemaIds.has(m.person_id)) rhemaMap[m.discipleship_id] = (rhemaMap[m.discipleship_id] || 0) + 1 })
+  const rhemaStudyMap: Record<string, number> = {}
+  memberCounts?.forEach(m => {
+    const st = rhemaById.get(m.person_id)
+    if (st === 'formado') rhemaMap[m.discipleship_id] = (rhemaMap[m.discipleship_id] || 0) + 1
+    if (st === 'cursando') rhemaStudyMap[m.discipleship_id] = (rhemaStudyMap[m.discipleship_id] || 0) + 1
+  })
   const totalRhema = Object.values(rhemaMap).reduce((a, b) => a + b, 0)
+  const totalRhemaStudying = Object.values(rhemaStudyMap).reduce((a, b) => a + b, 0)
   const totalKids = Object.values(kidsMap).reduce((a, b) => a + b, 0)
 
   const memberMap: Record<string, number> = {}
@@ -238,7 +244,7 @@ export default async function DiscipuladosPage() {
             { label: 'GCAs Ativos', value: activeGroups.length, icon: Home, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Adultos em GCA', value: totalMembers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Crianças em GCA', value: totalKids, icon: Baby, color: 'text-pink-600', bg: 'bg-pink-50' },
-            { label: 'Formados no RHEMA', value: totalRhema, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            { label: totalRhemaStudying ? `Formados no RHEMA (+${totalRhemaStudying} cursando)` : 'Formados no RHEMA', value: totalRhema, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
             { label: 'Precisam de Cuidado', value: totalNeedCare, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
           ].map(s => {
             const Icon = s.icon
@@ -343,6 +349,7 @@ export default async function DiscipuladosPage() {
                     </Badge>
                     {kidsMap[d.id] > 0 && <Badge variant="outline">👶 {kidsMap[d.id]} {kidsMap[d.id] === 1 ? 'criança' : 'crianças'}</Badge>}
                     {rhemaMap[d.id] > 0 && <Badge variant="outline">🎓 {rhemaMap[d.id]} RHEMA</Badge>}
+                    {rhemaStudyMap[d.id] > 0 && <Badge variant="outline">📖 {rhemaStudyMap[d.id]} cursando</Badge>}
                     {cap.state === 'acima' && <span className="text-xs font-semibold text-red-600">{cap.over} acima do limite</span>}
                     {careMap[d.id] > 0 && <Badge variant="warning">{careMap[d.id]} precisam de cuidado</Badge>}
                   </div>
@@ -418,11 +425,12 @@ export default async function DiscipuladosPage() {
                       <TableCell>
                         {(() => {
                           const cap = capMap[d.id]
-                          const kids = (kidsMap[d.id] > 0 || rhemaMap[d.id] > 0) ? (
+                          const kids = (kidsMap[d.id] > 0 || rhemaMap[d.id] > 0 || rhemaStudyMap[d.id] > 0) ? (
                             <span className="text-[11px] text-slate-500 whitespace-nowrap">
                               {kidsMap[d.id] > 0 && <>👶 {kidsMap[d.id]} {kidsMap[d.id] === 1 ? 'criança' : 'crianças'}</>}
                               {kidsMap[d.id] > 0 && rhemaMap[d.id] > 0 && ' · '}
                               {rhemaMap[d.id] > 0 && <>🎓 {rhemaMap[d.id]} RHEMA</>}
+                              {rhemaStudyMap[d.id] > 0 && <>{(kidsMap[d.id] > 0 || rhemaMap[d.id] > 0) && ' · '}📖 {rhemaStudyMap[d.id]} cursando</>}
                             </span>
                           ) : null
                           if (cap.limit == null) return <div className="flex flex-col items-start gap-0.5"><Badge variant="secondary">{cap.count}</Badge>{kids}</div>

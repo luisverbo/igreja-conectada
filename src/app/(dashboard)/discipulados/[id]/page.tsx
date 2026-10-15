@@ -99,7 +99,8 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
     : { data: [] as { id: string; full_name: string }[] }
   const spouseById = new Map((spouseRows || []).map(p => [p.id, p.full_name]))
   const memberIdSet = new Set(activeMembers.map((m: any) => m.people?.id))
-  const rhemaCount = activeMembers.filter((m: any) => m.people?.rhema_graduated).length
+  const rhemaCount = activeMembers.filter((m: any) => m.people?.rhema_status === 'formado').length
+  const rhemaStudying = activeMembers.filter((m: any) => m.people?.rhema_status === 'cursando').length
 
   const kidsCount = childrenByGca(
     activeMembers.map((m: any) => ({ discipleship_id: id, person_id: m.people?.id })),
@@ -275,7 +276,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
           {[
             { label: cap.limit ? `Adultos (limite ${cap.limit})` : 'Adultos', value: activeMembers.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Crianças', value: kidsCount, icon: Baby, color: 'text-pink-600', bg: 'bg-pink-50' },
-            { label: 'Formados RHEMA', value: rhemaCount, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            { label: rhemaStudying ? `Formados RHEMA (+${rhemaStudying} cursando)` : 'Formados RHEMA', value: rhemaCount, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
             { label: 'Em Acompanhamento', value: needCare.length, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
             { label: 'Liberados p/ Servir', value: liberadosServir.length, icon: Star, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           ].map(s => {
@@ -331,10 +332,13 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                             Desde {formatDate(member.joined_at)}
                             {member.people?.phone && ` · ${member.people.phone}`}
                           </p>
-                          {(member.people?.rhema_graduated || member.people?.marital_status === 'casado') && (
+                          {(['formado', 'cursando'].includes(member.people?.rhema_status) || member.people?.marital_status === 'casado') && (
                             <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap text-xs">
-                              {member.people?.rhema_graduated && (
+                              {member.people?.rhema_status === 'formado' && (
                                 <span className="font-semibold text-indigo-700">🎓 Formado(a) no RHEMA</span>
+                              )}
+                              {member.people?.rhema_status === 'cursando' && (
+                                <span className="font-semibold text-sky-700">📖 Cursando o RHEMA</span>
                               )}
                               {member.people?.marital_status === 'casado' && (() => {
                                 const sid = member.people.spouse_id

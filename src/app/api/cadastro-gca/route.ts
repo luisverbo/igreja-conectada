@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   // Estado civil, RHEMA e cônjuge
   const marital = ['solteiro', 'casado', 'divorciado', 'viuvo'].includes(body.marital_status) ? body.marital_status : null
   const married = marital === 'casado'
-  const rhema = body.rhema === 'sim' ? true : body.rhema === 'nao' ? false : null
+  const rhema: string | null = ['formado', 'cursando', 'nao'].includes(body.rhema) ? body.rhema : null
   // Casal participa junto do GCA (não existe "outro GCA"): nome e telefone
   // do cônjuge só vêm quando ele(a) participa — servem para o vínculo
   const spouseInGca: string | null = married && ['mesmo_gca', 'nao_participa'].includes(body.spouse_in_gca) ? body.spouse_in_gca : null
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
   let spouseLinkedName: string | null = null
   try {
     const extra: Record<string, unknown> = {}
-    if (rhema !== null) extra.rhema_graduated = rhema
+    if (rhema) extra.rhema_status = rhema
     if (marital) {
       extra.spouse_name = spouseName
       extra.spouse_phone = spousePhone

@@ -211,10 +211,10 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
       {/* RHEMA */}
       <div>
         <label className={labelClass}>Você é formado(a) no RHEMA? *</label>
-        <div className="grid grid-cols-2 gap-2">
-          {[['sim', 'Sim'], ['nao', 'Não']].map(([v, l]) => (
+        <div className="grid grid-cols-3 gap-2">
+          {[['formado', 'Sim, sou formado(a)'], ['cursando', 'Estou cursando'], ['nao', 'Não']].map(([v, l]) => (
             <button type="button" key={v} onClick={() => set('rhema', v)}
-              className={`h-11 rounded-lg border-2 text-sm font-semibold ${form.rhema === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
+              className={`min-h-11 px-1.5 py-1.5 rounded-lg border-2 text-xs sm:text-sm font-semibold leading-tight ${form.rhema === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
               {l}
             </button>
           ))}
@@ -235,9 +235,9 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
       </div>
 
       {form.marital_status === 'casado' && (
-        <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+        <div className="rounded-xl border-2 border-slate-300 bg-slate-100 p-4 space-y-3 shadow-sm">
           <div>
-            <label className={labelClass}>💍 Seu cônjuge participa deste GCA? *</label>
+            <label className="block text-sm font-bold text-slate-800 mb-2">💍 Seu cônjuge participa deste GCA? *</label>
             <div className="grid grid-cols-2 gap-2">
               {[['mesmo_gca', 'Sim'], ['nao_participa', 'Não']].map(([v, l]) => (
                 <button type="button" key={v} onClick={() => set('spouse_in_gca', v)}
