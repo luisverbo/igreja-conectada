@@ -83,6 +83,17 @@ export async function POST(req: NextRequest) {
   }
   const gender = body.gender === 'M' || body.gender === 'F' ? body.gender : null
 
+  // Filhos informados no formulário (não viram membros do GCA)
+  const children: { full_name: string; birth_date: string | null; gender: 'M' | 'F' | null }[] =
+    (Array.isArray(body.children) ? body.children : [])
+      .slice(0, 15)
+      .map((c: any) => ({
+        full_name: String(c?.full_name || '').trim().slice(0, 120),
+        birth_date: /^\d{4}-\d{2}-\d{2}$/.test(c?.birth_date || '') ? c.birth_date : null,
+        gender: c?.gender === 'M' || c?.gender === 'F' ? c.gender : null,
+      }))
+      .filter((c: { full_name: string }) => c.full_name)
+
   if (person) {
     // Atualiza com o que a pessoa acabou de informar (dados mais recentes)
     const update: Record<string, unknown> = { phone }
@@ -175,6 +186,31 @@ export async function POST(req: NextRequest) {
       reference_type: 'discipulado',
       reference_id: gca.id,
     })
+  }
+
+  // ── Filhos: atualiza quem já existe (mesmo nome) e acrescenta os novos.
+  //    Nunca apaga — se pai e mãe preencherem, cada um fica com os seus.
+  //    Falha aqui não pode derrubar o cadastro do adulto.
+  if (children.length > 0) {
+    try {
+      const { data: existing } = await supabase
+        .from('person_children')
+        .select('id, full_name')
+        .eq('parent_id', personId)
+      const byName = new Map((existing || []).map(c => [normName(c.full_name), c.id]))
+      for (const c of children) {
+        const id = byName.get(normName(c.full_name))
+        if (id) {
+          await supabase.from('person_children')
+            .update({ birth_date: c.birth_date, gender: c.gender, updated_at: new Date().toISOString() })
+            .eq('id', id)
+        } else {
+          await supabase.from('person_children')
+            .insert({ church_id: churchId, parent_id: personId, ...c })
+          byName.set(normName(c.full_name), 'novo')
+        }
+      }
+    } catch { /* tabela ainda não criada / erro pontual — segue o cadastro */ }
   }
 
   // Posição no mapa — depois da resposta, para não deixar a pessoa esperando

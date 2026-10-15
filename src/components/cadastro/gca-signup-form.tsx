@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, CheckCircle2, AlertCircle, Search, Clock } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle, Search, Clock, Minus, Plus, Baby } from 'lucide-react'
 
 export interface GcaOption {
   id: string
@@ -25,6 +25,10 @@ const empty = {
   nm: '',
 }
 
+interface Child { full_name: string; birth_date: string; gender: string }
+const emptyChild: Child = { full_name: '', birth_date: '', gender: '' }
+const MAX_CHILDREN = 10
+
 function maskPhone(v: string) {
   const d = v.replace(/\D/g, '').slice(0, 11)
   if (d.length <= 2) return d
@@ -41,6 +45,16 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<{ result: string; gcaName: string } | null>(null)
+  const [hasKids, setHasKids] = useState<'' | 'sim' | 'nao'>('')
+  const [kids, setKids] = useState<Child[]>([])
+
+  function setKidsCount(n: number) {
+    const count = Math.max(1, Math.min(MAX_CHILDREN, n))
+    setKids(prev => Array.from({ length: count }, (_, i) => prev[i] || { ...emptyChild }))
+  }
+  function setKid(i: number, k: keyof Child, v: string) {
+    setKids(prev => prev.map((c, j) => (j === i ? { ...c, [k]: v } : c)))
+  }
 
   function set(k: keyof typeof empty, v: string) { setForm(p => ({ ...p, [k]: v })) }
 
@@ -70,11 +84,19 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
     setError(null)
     if (picking && !gcaId) { setError('Escolha o seu GCA na lista.'); return }
     if (!form.nm) { setError('Responda se você já fez o curso de Novos Membros.'); return }
+    if (!hasKids) { setError('Responda se você tem filhos.'); return }
+    if (hasKids === 'sim') {
+      const missing = kids.findIndex(k => !k.full_name.trim() || !k.birth_date || !k.gender)
+      if (missing >= 0) { setError(`Preencha nome, data de nascimento e sexo do ${missing + 1}º filho.`); return }
+    }
     setLoading(true)
     const res = await fetch('/api/cadastro-gca', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, gcaToken, churchToken, discipleshipId: gcaId || undefined }),
+      body: JSON.stringify({
+        ...form, gcaToken, churchToken, discipleshipId: gcaId || undefined,
+        children: hasKids === 'sim' ? kids : [],
+      }),
     })
     const data = await res.json().catch(() => ({}))
     setLoading(false)
@@ -175,6 +197,68 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Filhos */}
+      <div>
+        <label className={labelClass}>Você tem filhos? *</label>
+        <div className="grid grid-cols-2 gap-2">
+          {([['sim', 'Sim'], ['nao', 'Não']] as const).map(([v, l]) => (
+            <button type="button" key={v}
+              onClick={() => { setHasKids(v); if (v === 'sim' && kids.length === 0) setKids([{ ...emptyChild }]) }}
+              className={`h-11 rounded-lg border-2 text-sm font-semibold ${hasKids === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {hasKids === 'sim' && (
+        <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Baby className="h-4 w-4 text-violet-600" /> Quantos filhos?</p>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setKidsCount(kids.length - 1)} disabled={kids.length <= 1}
+                aria-label="Menos um filho"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40">
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="w-6 text-center text-lg font-bold text-slate-900">{kids.length}</span>
+              <button type="button" onClick={() => setKidsCount(kids.length + 1)} disabled={kids.length >= MAX_CHILDREN}
+                aria-label="Mais um filho"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40">
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {kids.map((k, i) => (
+            <div key={i} className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-violet-700">{i + 1}º filho</p>
+              <div>
+                <label className={labelClass}>Nome *</label>
+                <input value={k.full_name} onChange={e => setKid(i, 'full_name', e.target.value)} className={inputClass} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>Data de nascimento *</label>
+                  <input type="date" value={k.birth_date} onChange={e => setKid(i, 'birth_date', e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Sexo *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[['M', 'Masculino'], ['F', 'Feminino']].map(([v, l]) => (
+                      <button type="button" key={v} onClick={() => setKid(i, 'gender', v)}
+                        className={`h-11 rounded-lg border-2 text-xs font-semibold ${k.gender === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="rounded-xl border border-slate-200 p-4 space-y-3">
         <p className="text-sm font-semibold text-slate-800">📍 Onde você mora</p>

@@ -2,7 +2,7 @@ import { getSessionProfile } from '@/lib/get-profile'
 import { notFound, redirect } from 'next/navigation'
 import { FULL_ACCESS } from '@/lib/roles'
 import Link from 'next/link'
-import { ArrowLeft, Home, MapPin, Users, AlertCircle, Star, Eye } from 'lucide-react'
+import { ArrowLeft, Home, MapPin, Users, AlertCircle, Star, Eye, Baby } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,7 +14,7 @@ import { EditDiscipleshipDialog } from '@/components/discipulados/edit-disciples
 import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
 import { ObservationEditButton } from '@/components/discipulados/observation-edit-button'
 import { GcaSurveysCard } from '@/components/gca/gca-surveys-card'
-import { leadersFull, leaderNames, leadersShort, gcaCapacity } from '@/lib/gca'
+import { leadersFull, leaderNames, leadersShort, gcaCapacity, childrenByGca, childAgeLabel } from '@/lib/gca'
 import { haversineKm, formatKm } from '@/lib/geo'
 import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
@@ -81,6 +81,21 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
   }
 
   const activeMembers = members?.filter(m => m.status !== 'inativo') || []
+
+  // Filhos dos membros (crianças — não contam no limite de participantes)
+  const memberPersonIds = (members || []).map((m: any) => m.people?.id).filter(Boolean)
+  const { data: childRows } = memberPersonIds.length
+    ? await supabase.from('person_children')
+        .select('id, parent_id, full_name, birth_date, gender')
+        .in('parent_id', memberPersonIds)
+        .order('birth_date', { ascending: true })
+    : { data: [] as any[] }
+  const kidsByParent: Record<string, any[]> = {}
+  ;(childRows || []).forEach((c: any) => { (kidsByParent[c.parent_id] ||= []).push(c) })
+  const kidsCount = childrenByGca(
+    activeMembers.map((m: any) => ({ discipleship_id: id, person_id: m.people?.id })),
+    childRows || [],
+  )[id] || 0
   const needCare = members?.filter(m => m.status === 'em_acompanhamento' || m.status === 'situacao_sensivel') || []
   const liberadosServir = members?.filter(m => m.status === 'liberado_para_servir') || []
 
@@ -247,9 +262,10 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           {[
-            { label: cap.limit ? `Membros Ativos (limite ${cap.limit})` : 'Membros Ativos', value: activeMembers.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
+            { label: cap.limit ? `Adultos (limite ${cap.limit})` : 'Adultos', value: activeMembers.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
+            { label: 'Crianças', value: kidsCount, icon: Baby, color: 'text-pink-600', bg: 'bg-pink-50' },
             { label: 'Em Acompanhamento', value: needCare.length, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
             { label: 'Liberados p/ Servir', value: liberadosServir.length, icon: Star, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           ].map(s => {
@@ -305,6 +321,14 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                             Desde {formatDate(member.joined_at)}
                             {member.people?.phone && ` · ${member.people.phone}`}
                           </p>
+                          {kidsByParent[member.people?.id]?.length > 0 && (
+                            <p className="text-xs text-slate-600 mt-1">
+                              👶 {kidsByParent[member.people.id].map((k: any) => {
+                                const age = childAgeLabel(k.birth_date)
+                                return `${k.full_name.split(' ')[0]}${age ? ` (${age})` : ''}`
+                              }).join(' · ')}
+                            </p>
+                          )}
 
                           {/* Latest observation */}
                           {latestObs && (

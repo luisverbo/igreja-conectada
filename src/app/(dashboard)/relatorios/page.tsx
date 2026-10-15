@@ -8,7 +8,7 @@ import { ChartsSection } from '@/components/relatorios/charts-section'
 import { MapSection } from '@/components/relatorios/map-section'
 import { NeighborhoodFilter } from '@/components/relatorios/neighborhood-filter'
 import Link from 'next/link'
-import { leadersShort, gcaCapacity } from '@/lib/gca'
+import { leadersShort, gcaCapacity, childrenByGca } from '@/lib/gca'
 
 export default async function RelatoriosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -47,7 +47,7 @@ export default async function RelatoriosPage() {
       .eq('church_id', cid),
     supabase
       .from('discipleship_members')
-      .select('discipleship_id, status, discipleships!inner(church_id)')
+      .select('discipleship_id, person_id, status, discipleships!inner(church_id)')
       .neq('status', 'inativo')
       .eq('discipleships.church_id', cid),
     supabase
@@ -295,6 +295,9 @@ export default async function RelatoriosPage() {
   // Só células ATIVAS no mapa, com o card completo no clique
   const { data: churchCap } = await supabase
     .from('churches').select('gca_default_max_members').eq('id', cid).single()
+  const { data: childRows } = await supabase
+    .from('person_children').select('parent_id, full_name, birth_date').eq('church_id', cid)
+  const gcaKids = childrenByGca((discipleshipMembers || []) as any, childRows || [])
   const gcaMemberCount: Record<string, number> = {}
   discipleshipMembers?.forEach((m: any) => {
     if (m.status !== 'inativo') gcaMemberCount[m.discipleship_id] = (gcaMemberCount[m.discipleship_id] || 0) + 1
@@ -317,6 +320,7 @@ export default async function RelatoriosPage() {
         time_start: d.time_start ? String(d.time_start).slice(0, 5) : null,
         meeting_frequency: d.meeting_frequency ?? null,
         member_count: gcaMemberCount[d.id] || 0,
+        kids_count: gcaKids[d.id] || 0,
         ...(() => {
           const c = gcaCapacity(d.max_members, churchCap?.gca_default_max_members, gcaMemberCount[d.id] || 0)
           return { capacity_limit: c.limit, capacity_over: c.over, capacity_state: c.state }

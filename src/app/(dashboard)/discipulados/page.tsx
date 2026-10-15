@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Home, Users, AlertCircle, MapPin } from 'lucide-react'
+import { Home, Users, AlertCircle, MapPin, Baby } from 'lucide-react'
 import Link from 'next/link'
 import { NewDiscipleshipDialog } from '@/components/discipulados/new-discipleship-dialog'
 import { LocationsSection } from '@/components/discipulados/locations-section'
@@ -18,7 +18,7 @@ import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
 import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { leadersShort, gcaCapacity, type GcaCapacity } from '@/lib/gca'
+import { leadersShort, gcaCapacity, childrenByGca, type GcaCapacity } from '@/lib/gca'
 import { CapacityDialog, type CapacityGca } from '@/components/discipulados/capacity-dialog'
 
 export default async function DiscipuladosPage() {
@@ -99,9 +99,17 @@ export default async function DiscipuladosPage() {
   const ids = discipleships?.map(d => d.id) || []
   const { data: memberCounts } = await supabase
     .from('discipleship_members')
-    .select('discipleship_id, status')
+    .select('discipleship_id, person_id, status')
     .in('discipleship_id', ids)
     .neq('status', 'inativo')
+
+  // Crianças: filhos dos membros ativos (não contam no limite)
+  const { data: childRows } = await supabase
+    .from('person_children')
+    .select('parent_id, full_name, birth_date')
+    .eq('church_id', profile.church_id)
+  const kidsMap = childrenByGca(memberCounts || [], childRows || [])
+  const totalKids = Object.values(kidsMap).reduce((a, b) => a + b, 0)
 
   const memberMap: Record<string, number> = {}
   const careMap: Record<string, number> = {}
@@ -217,10 +225,11 @@ export default async function DiscipuladosPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           {[
             { label: 'GCAs Ativos', value: activeGroups.length, icon: Home, color: 'text-violet-600', bg: 'bg-violet-50' },
-            { label: 'Pessoas em GCA', value: totalMembers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Adultos em GCA', value: totalMembers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Crianças em GCA', value: totalKids, icon: Baby, color: 'text-pink-600', bg: 'bg-pink-50' },
             { label: 'Precisam de Cuidado', value: totalNeedCare, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
           ].map(s => {
             const Icon = s.icon
@@ -321,8 +330,9 @@ export default async function DiscipuladosPage() {
                   </p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <Badge variant={cap.state === 'acima' ? 'destructive' : cap.state === 'lotado' || cap.state === 'quase' ? 'warning' : 'secondary'}>
-                      👥 {cap.count}{cap.limit != null ? `/${cap.limit}` : ''} {cap.limit == null ? (cap.count === 1 ? 'membro' : 'membros') : ''}
+                      👥 {cap.count}{cap.limit != null ? `/${cap.limit}` : ''} {cap.limit == null ? (cap.count === 1 ? 'adulto' : 'adultos') : 'adultos'}
                     </Badge>
+                    {kidsMap[d.id] > 0 && <Badge variant="outline">👶 {kidsMap[d.id]} {kidsMap[d.id] === 1 ? 'criança' : 'crianças'}</Badge>}
                     {cap.state === 'acima' && <span className="text-xs font-semibold text-red-600">{cap.over} acima do limite</span>}
                     {careMap[d.id] > 0 && <Badge variant="warning">{careMap[d.id]} precisam de cuidado</Badge>}
                   </div>
@@ -353,7 +363,7 @@ export default async function DiscipuladosPage() {
                   <TableHead>Líder</TableHead>
                   <TableHead>Supervisor</TableHead>
                   <TableHead>Local / Dia</TableHead>
-                  <TableHead>Membros</TableHead>
+                  <TableHead>Adultos</TableHead>
                   <TableHead>Precisam Cuidado</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
@@ -398,14 +408,19 @@ export default async function DiscipuladosPage() {
                       <TableCell>
                         {(() => {
                           const cap = capMap[d.id]
-                          if (cap.limit == null) return <Badge variant="secondary">{cap.count}</Badge>
+                          const kids = kidsMap[d.id] > 0
+                            ? <span className="text-[11px] text-slate-500 whitespace-nowrap">👶 {kidsMap[d.id]} {kidsMap[d.id] === 1 ? 'criança' : 'crianças'}</span>
+                            : null
+                          if (cap.limit == null) return <div className="flex flex-col items-start gap-0.5"><Badge variant="secondary">{cap.count}</Badge>{kids}</div>
                           return (
                             <div className="flex flex-col items-start gap-0.5">
+                              {/* limite conta só adultos; crianças aparecem à parte */}
                               <Badge variant={cap.state === 'acima' ? 'destructive' : cap.state === 'lotado' || cap.state === 'quase' ? 'warning' : 'secondary'}>
                                 {cap.count}/{cap.limit}
                               </Badge>
                               {cap.state === 'acima' && <span className="text-[11px] font-semibold text-red-600">{cap.over} acima</span>}
                               {cap.state === 'lotado' && <span className="text-[11px] text-amber-600">lotado</span>}
+                              {kids}
                             </div>
                           )
                         })()}

@@ -59,3 +59,46 @@ export function gcaCapacity(
   const state = count > limit ? 'acima' : count === limit ? 'lotado' : count >= limit * 0.9 ? 'quase' : 'ok'
   return { limit, count, over, free, state }
 }
+
+// ── Crianças (filhos dos membros) ────────────────────────────────────
+// Não são membros do GCA e NÃO contam no limite de participantes.
+
+export interface ChildRow { parent_id: string; full_name: string; birth_date: string | null }
+
+const childKey = (c: ChildRow) =>
+  `${c.full_name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()}|${c.birth_date || ''}`
+
+/**
+ * Quantas crianças cada GCA tem, a partir dos membros ativos e dos filhos
+ * cadastrados. Se pai e mãe do mesmo GCA cadastraram o mesmo filho
+ * (mesmo nome e nascimento), conta uma vez só.
+ */
+export function childrenByGca(
+  members: { discipleship_id: string; person_id: string }[],
+  children: ChildRow[],
+): Record<string, number> {
+  const kidsByParent = new Map<string, ChildRow[]>()
+  children.forEach(c => kidsByParent.set(c.parent_id, [...(kidsByParent.get(c.parent_id) || []), c]))
+
+  const seen: Record<string, Set<string>> = {}
+  members.forEach(m => {
+    for (const c of kidsByParent.get(m.person_id) || []) {
+      (seen[m.discipleship_id] ||= new Set()).add(childKey(c))
+    }
+  })
+  return Object.fromEntries(Object.entries(seen).map(([id, s]) => [id, s.size]))
+}
+
+/** "3 anos" / "8 meses" — bebês aparecem em meses */
+export function childAgeLabel(birthDate: string | null | undefined): string | null {
+  if (!birthDate) return null
+  const b = new Date(birthDate + 'T12:00:00')
+  if (isNaN(b.getTime())) return null
+  const now = new Date()
+  let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth())
+  if (now.getDate() < b.getDate()) months--
+  if (months < 0) return null
+  if (months < 12) return `${months} ${months === 1 ? 'mês' : 'meses'}`
+  const years = Math.floor(months / 12)
+  return `${years} ${years === 1 ? 'ano' : 'anos'}`
+}

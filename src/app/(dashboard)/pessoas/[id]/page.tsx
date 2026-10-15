@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Phone, Mail, Calendar, MapPin, BookOpen, Home, Heart } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, Calendar, MapPin, BookOpen, Home, Heart, Baby } from 'lucide-react'
+import { childAgeLabel } from '@/lib/gca'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -46,6 +47,7 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
     { data: enrollments },
     { data: discipleshipMemberships },
     { data: decisions },
+    { data: children },
   ] = await Promise.all([
     supabase.from('people').select('*').eq('id', id).single(),
     supabase.from('journey_events')
@@ -61,6 +63,10 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
     supabase.from('decisions')
       .select('*, appeals(name, culto_date)')
       .eq('person_id', id),
+    supabase.from('person_children')
+      .select('id, full_name, birth_date, gender')
+      .eq('parent_id', id)
+      .order('birth_date', { ascending: true }),
   ])
 
   if (!person) notFound()
@@ -202,6 +208,33 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
               )}
             </CardContent>
           </Card>
+
+          {/* Filhos */}
+          {children && children.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Baby className="h-4 w-4 text-pink-500" />
+                  Filhos ({children.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {children.map((c: any) => (
+                  <div key={c.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{c.full_name}</p>
+                      <p className="text-xs text-slate-500">
+                        {[c.gender === 'M' ? 'Menino' : c.gender === 'F' ? 'Menina' : null, c.birth_date ? formatDate(c.birth_date) : null].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    {childAgeLabel(c.birth_date) && (
+                      <span className="text-xs font-semibold text-pink-600 flex-shrink-0">{childAgeLabel(c.birth_date)}</span>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Decisions */}
           {decisions && decisions.length > 0 && (

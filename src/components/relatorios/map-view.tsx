@@ -81,6 +81,7 @@ export interface DiscipleshipMarker {
   time_start: string | null
   meeting_frequency: string | null
   member_count: number
+  kids_count: number
   capacity_limit: number | null
   capacity_over: number
   capacity_state: CapState
@@ -263,11 +264,14 @@ export function MapView({ people, discipleships, novosGroups, membrosGroups }: P
                   )}
 
                   <p className={d.capacity_state === 'acima' ? 'text-red-600 font-semibold' : d.capacity_state === 'lotado' ? 'text-orange-600 font-semibold' : 'text-slate-600'}>
-                    👥 {d.member_count} {d.member_count === 1 ? 'membro' : 'membros'}
+                    👥 {d.member_count} {d.member_count === 1 ? 'adulto' : 'adultos'}
                     {d.capacity_limit != null && ` / limite ${d.capacity_limit}`}
                     {d.capacity_state === 'acima' && ` — ${d.capacity_over} acima do limite`}
                     {d.capacity_state === 'lotado' && ' — lotado'}
                   </p>
+                  {d.kids_count > 0 && (
+                    <p className="text-slate-600">👶 {d.kids_count} {d.kids_count === 1 ? 'criança' : 'crianças'}</p>
+                  )}
 
                   <a
                     href={`/discipulados/${d.id}`}
