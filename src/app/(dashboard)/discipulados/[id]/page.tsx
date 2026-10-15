@@ -339,7 +339,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                               {member.people?.marital_status === 'casado' && (() => {
                                 const sid = member.people.spouse_id
                                 const sname = sid ? spouseById.get(sid) : member.people.spouse_name
-                                if (!sname) return <span className="text-slate-600">💍 Casado(a)</span>
+                                if (!sname) return <span className="text-slate-600">💍 Casado(a){member.people.spouse_in_gca === 'nao_participa' ? ' · cônjuge não participa' : ''}</span>
                                 return (
                                   <span className="text-slate-600">
                                     💍 Casado(a) com{' '}
@@ -348,7 +348,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                                       : <strong className="text-slate-700">{sname}</strong>}
                                     {sid
                                       ? (memberIdSet.has(sid) ? ' · mesmo GCA' : ' · outro GCA')
-                                      : <span className="text-amber-600">{member.people.spouse_in_gca === 'mesmo_gca' ? ' · ainda não preencheu o link' : member.people.spouse_in_gca === 'outro_gca' ? ' · de outro GCA, sem cadastro' : ' · não participa'}</span>}
+                                      : <span className="text-amber-600"> · ainda não preencheu o link</span>}
                                   </span>
                                 )
                               })()}

@@ -87,9 +87,12 @@ export async function POST(req: NextRequest) {
   const marital = ['solteiro', 'casado', 'divorciado', 'viuvo'].includes(body.marital_status) ? body.marital_status : null
   const married = marital === 'casado'
   const rhema = body.rhema === 'sim' ? true : body.rhema === 'nao' ? false : null
-  const spouseName: string | null = married ? (String(body.spouse_name || '').trim().slice(0, 120) || null) : null
-  const spousePhone: string | null = married && phoneKey(body.spouse_phone || '').length >= 8 ? String(body.spouse_phone).trim() : null
-  const spouseInGca: string | null = married && ['mesmo_gca', 'outro_gca', 'nao_participa'].includes(body.spouse_in_gca) ? body.spouse_in_gca : null
+  // Casal participa junto do GCA (não existe "outro GCA"): nome e telefone
+  // do cônjuge só vêm quando ele(a) participa — servem para o vínculo
+  const spouseInGca: string | null = married && ['mesmo_gca', 'nao_participa'].includes(body.spouse_in_gca) ? body.spouse_in_gca : null
+  const spouseJoins = spouseInGca === 'mesmo_gca'
+  const spouseName: string | null = spouseJoins ? (String(body.spouse_name || '').trim().slice(0, 120) || null) : null
+  const spousePhone: string | null = spouseJoins && phoneKey(body.spouse_phone || '').length >= 8 ? String(body.spouse_phone).trim() : null
 
   // Filhos informados no formulário (não viram membros do GCA)
   const children: { full_name: string; birth_date: string | null; gender: 'M' | 'F' | null }[] =
@@ -213,7 +216,7 @@ export async function POST(req: NextRequest) {
     if (Object.keys(extra).length) {
       await supabase.from('people').update(extra).eq('id', personId)
     }
-    if (married) spouseLinkedName = await linkSpouse(supabase, {
+    if (spouseJoins) spouseLinkedName = await linkSpouse(supabase, {
       churchId, gcaId: gca.id, personId, myName: full_name, myPhone: phone, spouseName, spousePhone,
     })
   } catch { /* segue o cadastro */ }

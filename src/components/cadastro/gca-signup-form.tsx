@@ -88,8 +88,8 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
     if (!form.rhema) { setError('Responda se você é formado(a) no RHEMA.'); return }
     if (!form.marital_status) { setError('Informe seu estado civil.'); return }
     if (form.marital_status === 'casado') {
-      if (!form.spouse_name.trim()) { setError('Informe o nome do seu cônjuge.'); return }
-      if (!form.spouse_in_gca) { setError('Responda se seu cônjuge participa do GCA.'); return }
+      if (!form.spouse_in_gca) { setError('Responda se seu cônjuge participa deste GCA.'); return }
+      if (form.spouse_in_gca === 'mesmo_gca' && !form.spouse_name.trim()) { setError('Informe o nome do seu cônjuge.'); return }
     }
     if (!hasKids) { setError('Responda se você tem filhos.'); return }
     if (hasKids === 'sim') {
@@ -236,29 +236,32 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
 
       {form.marital_status === 'casado' && (
         <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
-          <p className="text-sm font-semibold text-slate-800">💍 Seu cônjuge</p>
           <div>
-            <label className={labelClass}>Nome completo do cônjuge *</label>
-            <input value={form.spouse_name} onChange={e => set('spouse_name', e.target.value)} className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>WhatsApp do cônjuge <span className="text-slate-400 font-normal">(ajuda a ligar os dois cadastros)</span></label>
-            <input type="tel" inputMode="tel" value={form.spouse_phone} onChange={e => set('spouse_phone', maskPhone(e.target.value))} placeholder="(21) 99999-9999" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Seu cônjuge participa do GCA? *</label>
-            <div className="grid grid-cols-1 gap-2">
-              {[['mesmo_gca', 'Sim, do mesmo GCA que eu'], ['outro_gca', 'Sim, de outro GCA'], ['nao_participa', 'Não participa de GCA']].map(([v, l]) => (
+            <label className={labelClass}>💍 Seu cônjuge participa deste GCA? *</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[['mesmo_gca', 'Sim'], ['nao_participa', 'Não']].map(([v, l]) => (
                 <button type="button" key={v} onClick={() => set('spouse_in_gca', v)}
-                  className={`min-h-11 px-3 rounded-lg border-2 text-sm font-semibold text-left ${form.spouse_in_gca === v ? 'border-violet-600 bg-white text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                  className={`h-11 rounded-lg border-2 text-sm font-semibold ${form.spouse_in_gca === v ? 'border-violet-600 bg-white text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>
                   {l}
                 </button>
               ))}
             </div>
-            {form.spouse_in_gca === 'mesmo_gca' && (
-              <p className="text-xs text-violet-700 mt-2">👉 Peça para seu cônjuge também preencher este link — o sistema liga os dois cadastros sozinho.</p>
-            )}
           </div>
+
+          {/* Nome e telefone só quando participa — servem para ligar os dois cadastros */}
+          {form.spouse_in_gca === 'mesmo_gca' && (
+            <>
+              <div>
+                <label className={labelClass}>Nome completo do cônjuge *</label>
+                <input value={form.spouse_name} onChange={e => set('spouse_name', e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>WhatsApp do cônjuge <span className="text-slate-400 font-normal">(ajuda a ligar os dois cadastros)</span></label>
+                <input type="tel" inputMode="tel" value={form.spouse_phone} onChange={e => set('spouse_phone', maskPhone(e.target.value))} placeholder="(21) 99999-9999" className={inputClass} />
+              </div>
+              <p className="text-xs text-violet-700">👉 Peça para seu cônjuge também preencher este link — o sistema liga os dois cadastros sozinho.</p>
+            </>
+          )}
         </div>
       )}
 
