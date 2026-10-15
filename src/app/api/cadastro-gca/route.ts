@@ -247,9 +247,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Posição no mapa — depois da resposta, para não deixar a pessoa esperando
-  if (addressFields.city && (addressFields.address || addressFields.neighborhood)) {
+  //    O CEP manda: é ele que segura a posição na rua certa
+  const cep = String(body.cep || '').replace(/\D/g, '')
+  if (cep.length === 8 || (addressFields.city && (addressFields.address || addressFields.neighborhood))) {
     after(async () => {
-      const geo = await geocodeAddress(addressFields)
+      const geo = await geocodeAddress({ ...addressFields, cep })
       if (geo.found) {
         await supabase.from('people')
           .update({ latitude: geo.lat, longitude: geo.lng })

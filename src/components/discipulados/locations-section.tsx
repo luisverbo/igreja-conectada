@@ -27,6 +27,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
     location_type: 'casa',
     host_name: '',
     host_phone: '',
+    cep: '',
     address: '',
     neighborhood: '',
     city: '',
@@ -46,7 +47,32 @@ export function LocationsSection({ churchId, canEdit }: Props) {
   const [showMap, setShowMap] = useState(false)
   const [mapKey, setMapKey] = useState(0)
 
-  const ADDRESS_FIELDS = ['address', 'neighborhood', 'city', 'state']
+  const ADDRESS_FIELDS = ['cep', 'address', 'neighborhood', 'city', 'state']
+  const [cepLoading, setCepLoading] = useState(false)
+
+  /** CEP → preenche rua, bairro, cidade e UF (ViaCEP) */
+  async function onCep(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 8)
+    set('cep', digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits)
+    if (digits.length !== 8) return
+    setCepLoading(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      const d = await res.json()
+      if (!d.erro) {
+        setForm(p => ({
+          ...p,
+          // mantém o número se a pessoa já tinha digitado
+          // se já digitou rua com número, mantém; senão põe a rua do CEP para completar o número
+          address: p.address && /\d/.test(p.address) ? p.address : (d.logradouro ? `${d.logradouro}, ` : p.address),
+          neighborhood: d.bairro || p.neighborhood,
+          city: d.localidade || p.city,
+          state: d.uf || p.state,
+        }))
+      }
+    } catch { /* preenche na mão */ }
+    setCepLoading(false)
+  }
 
   function set(k: string, v: string) {
     setForm(p => ({ ...p, [k]: v }))
@@ -64,7 +90,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
       .join(', ')
   }
 
-  const canVerify = !!form.address.trim() && !!form.city.trim()
+  const canVerify = (!!form.address.trim() && !!form.city.trim()) || form.cep.replace(/\D/g, '').length === 8
 
   /** Link do Google Maps: usa as coordenadas quando já conferidas, senão busca pelo texto. */
   function mapsUrl() {
@@ -79,6 +105,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          cep: form.cep,
           address: form.address,
           neighborhood: form.neighborhood,
           city: form.city,
@@ -110,7 +137,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
   }
 
   const emptyForm = {
-    name: '', location_type: 'casa', host_name: '', host_phone: '',
+    name: '', location_type: 'casa', host_name: '', host_phone: '', cep: '',
     address: '', neighborhood: '', city: '', state: '', notes: '',
   }
 
@@ -130,6 +157,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
       location_type: loc.location_type || 'casa',
       host_name: loc.host_name || '',
       host_phone: loc.host_phone || '',
+      cep: '',
       address: loc.address || '',
       neighborhood: loc.neighborhood || '',
       city: loc.city || '',
@@ -367,6 +395,17 @@ export function LocationsSection({ churchId, canEdit }: Props) {
                 </div>
               )}
 
+              <div className="grid grid-cols-5 gap-3">
+                <div className="col-span-2">
+                  <label className={labelClass}>CEP</label>
+                  <div className="relative">
+                    <input inputMode="numeric" value={form.cep} onChange={e => onCep(e.target.value)} placeholder="00000-000" className={inputClass} />
+                    {cepLoading && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-violet-500" />}
+                  </div>
+                </div>
+                <p className="col-span-3 self-end pb-2 text-[11px] text-slate-500">Digite o CEP: preenche a rua e deixa o local certinho no mapa.</p>
+              </div>
+
               <div>
                 <label className={labelClass}>Endereço</label>
                 <input type="text" value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, número" className={inputClass} />
@@ -436,7 +475,7 @@ export function LocationsSection({ churchId, canEdit }: Props) {
                 </div>
 
                 {!canVerify && (
-                  <p className="text-[11px] text-slate-400 mt-2">Preencha Endereço e Cidade para conferir no mapa.</p>
+                  <p className="text-[11px] text-slate-400 mt-2">Preencha o CEP (ou Endereço e Cidade) para conferir no mapa.</p>
                 )}
 
                 {verify.status === 'found' && (

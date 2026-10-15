@@ -8,10 +8,11 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
-  const { address, neighborhood, city, state } = await req.json()
-  if (!city || (!address && !neighborhood)) {
+  const { address, neighborhood, city, state, cep } = await req.json()
+  const hasCep = String(cep || '').replace(/\D/g, '').length === 8
+  if (!hasCep && (!city || (!address && !neighborhood))) {
     return NextResponse.json({ error: 'Informe pelo menos o endereço (ou bairro) e a cidade.' }, { status: 400 })
   }
 
-  return NextResponse.json(await geocodeAddress({ address, neighborhood, city, state }))
+  return NextResponse.json(await geocodeAddress({ address, neighborhood, city, state, cep }))
 }

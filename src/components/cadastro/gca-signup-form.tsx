@@ -92,6 +92,7 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
       if (form.spouse_in_gca === 'mesmo_gca' && !form.spouse_name.trim()) { setError('Informe o nome do seu cônjuge.'); return }
     }
     if (!hasKids) { setError('Responda se você tem filhos.'); return }
+    if (form.cep.replace(/\D/g, '').length !== 8) { setError('Informe o CEP da sua casa (8 números) — é ele que coloca você no lugar certo do mapa.'); return }
     if (hasKids === 'sim') {
       const missing = kids.findIndex(k => !k.full_name.trim() || !k.birth_date || !k.gender)
       if (missing >= 0) { setError(`Preencha nome, data de nascimento e sexo do ${missing + 1}º filho.`); return }
@@ -329,9 +330,10 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
 
       <div className="rounded-xl border border-slate-200 p-4 space-y-3">
         <p className="text-sm font-semibold text-slate-800">📍 Onde você mora</p>
+        <p className="text-xs text-slate-500 -mt-1">Comece pelo CEP: a rua, o bairro e a cidade são preenchidos sozinhos.</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelClass}>CEP</label>
+            <label className={labelClass}>CEP *</label>
             <div className="relative">
               <input inputMode="numeric" value={form.cep} onChange={e => onCep(e.target.value)} placeholder="00000-000" className={inputClass} />
               {cepLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-violet-500" />}

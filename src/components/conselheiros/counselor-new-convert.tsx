@@ -66,6 +66,7 @@ export function CounselorNewConvert({ churchId, userId, userName }: Props) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                cep: digits,
                 address: data.logradouro,
                 neighborhood: data.bairro,
                 city: data.localidade,
