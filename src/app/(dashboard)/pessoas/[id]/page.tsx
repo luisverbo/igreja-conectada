@@ -71,6 +71,10 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
 
   if (!person) notFound()
 
+  const { data: spouse } = person.spouse_id
+    ? await supabase.from('people').select('id, full_name').eq('id', person.spouse_id).maybeSingle()
+    : { data: null }
+
   return (
     <div>
       {/* Header */}
@@ -172,7 +176,23 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                 {person.marital_status && (
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Estado Civil</dt>
-                    <dd className="text-slate-700 capitalize">{person.marital_status}</dd>
+                    <dd className="text-slate-700">{({ solteiro: 'Solteiro(a)', casado: 'Casado(a)', divorciado: 'Divorciado(a)', viuvo: 'Viúvo(a)' } as Record<string, string>)[person.marital_status] || person.marital_status}</dd>
+                  </div>
+                )}
+                {person.marital_status === 'casado' && (person.spouse_id || person.spouse_name) && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-500 flex-shrink-0">Cônjuge</dt>
+                    <dd className="text-slate-700 text-right">
+                      {spouse
+                        ? <Link href={`/pessoas/${spouse.id}`} className="font-medium text-violet-700 hover:underline">{spouse.full_name}</Link>
+                        : <>{person.spouse_name} <span className="text-xs text-amber-600">(ainda sem cadastro)</span></>}
+                    </dd>
+                  </div>
+                )}
+                {person.rhema_graduated != null && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">Formado no RHEMA</dt>
+                    <dd className={person.rhema_graduated ? 'text-indigo-700 font-semibold' : 'text-slate-700'}>{person.rhema_graduated ? '🎓 Sim' : 'Não'}</dd>
                   </div>
                 )}
                 {person.profession && (

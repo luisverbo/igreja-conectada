@@ -2,7 +2,7 @@ import { getSessionProfile } from '@/lib/get-profile'
 import { notFound, redirect } from 'next/navigation'
 import { FULL_ACCESS } from '@/lib/roles'
 import Link from 'next/link'
-import { ArrowLeft, Home, MapPin, Users, AlertCircle, Star, Eye, Baby } from 'lucide-react'
+import { ArrowLeft, Home, MapPin, Users, AlertCircle, Star, Eye, Baby, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,7 +43,7 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
       .eq('id', id)
       .single(),
     supabase.from('discipleship_members')
-      .select('*, people(id, full_name, phone, status, latitude, longitude), discipleship_observations(id, observation_type, description, needs_care, observation_date, profiles(full_name))')
+      .select('*, people(*), discipleship_observations(id, observation_type, description, needs_care, observation_date, profiles(full_name))')
       .eq('discipleship_id', id)
       .order('status')
       .order('created_at')
@@ -92,6 +92,15 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
     : { data: [] as any[] }
   const kidsByParent: Record<string, any[]> = {}
   ;(childRows || []).forEach((c: any) => { (kidsByParent[c.parent_id] ||= []).push(c) })
+  // Cônjuges já vinculados (podem ser de outro GCA)
+  const spouseIds = [...new Set((members || []).map((m: any) => m.people?.spouse_id).filter(Boolean))] as string[]
+  const { data: spouseRows } = spouseIds.length
+    ? await supabase.from('people').select('id, full_name').in('id', spouseIds)
+    : { data: [] as { id: string; full_name: string }[] }
+  const spouseById = new Map((spouseRows || []).map(p => [p.id, p.full_name]))
+  const memberIdSet = new Set(activeMembers.map((m: any) => m.people?.id))
+  const rhemaCount = activeMembers.filter((m: any) => m.people?.rhema_graduated).length
+
   const kidsCount = childrenByGca(
     activeMembers.map((m: any) => ({ discipleship_id: id, person_id: m.people?.id })),
     childRows || [],
@@ -262,10 +271,11 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
           {[
             { label: cap.limit ? `Adultos (limite ${cap.limit})` : 'Adultos', value: activeMembers.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Crianças', value: kidsCount, icon: Baby, color: 'text-pink-600', bg: 'bg-pink-50' },
+            { label: 'Formados RHEMA', value: rhemaCount, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
             { label: 'Em Acompanhamento', value: needCare.length, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
             { label: 'Liberados p/ Servir', value: liberadosServir.length, icon: Star, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           ].map(s => {
@@ -321,6 +331,29 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                             Desde {formatDate(member.joined_at)}
                             {member.people?.phone && ` · ${member.people.phone}`}
                           </p>
+                          {(member.people?.rhema_graduated || member.people?.marital_status === 'casado') && (
+                            <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap text-xs">
+                              {member.people?.rhema_graduated && (
+                                <span className="font-semibold text-indigo-700">🎓 Formado(a) no RHEMA</span>
+                              )}
+                              {member.people?.marital_status === 'casado' && (() => {
+                                const sid = member.people.spouse_id
+                                const sname = sid ? spouseById.get(sid) : member.people.spouse_name
+                                if (!sname) return <span className="text-slate-600">💍 Casado(a)</span>
+                                return (
+                                  <span className="text-slate-600">
+                                    💍 Casado(a) com{' '}
+                                    {sid
+                                      ? <Link href={`/pessoas/${sid}`} className="font-semibold text-violet-700 hover:underline">{sname}</Link>
+                                      : <strong className="text-slate-700">{sname}</strong>}
+                                    {sid
+                                      ? (memberIdSet.has(sid) ? ' · mesmo GCA' : ' · outro GCA')
+                                      : <span className="text-amber-600">{member.people.spouse_in_gca === 'mesmo_gca' ? ' · ainda não preencheu o link' : member.people.spouse_in_gca === 'outro_gca' ? ' · de outro GCA, sem cadastro' : ' · não participa'}</span>}
+                                  </span>
+                                )
+                              })()}
+                            </div>
+                          )}
                           {kidsByParent[member.people?.id]?.length > 0 && (
                             <p className="text-xs text-slate-600 mt-1">
                               👶 {kidsByParent[member.people.id].map((k: any) => {

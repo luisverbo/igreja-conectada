@@ -23,6 +23,7 @@ const empty = {
   full_name: '', phone: '', birth_date: '', gender: '',
   cep: '', address: '', number: '', complement: '', neighborhood: '', city: '', state: '',
   nm: '',
+  rhema: '', marital_status: '', spouse_name: '', spouse_phone: '', spouse_in_gca: '',
 }
 
 interface Child { full_name: string; birth_date: string; gender: string }
@@ -44,7 +45,7 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
   const [cepLoading, setCepLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState<{ result: string; gcaName: string } | null>(null)
+  const [done, setDone] = useState<{ result: string; gcaName: string; spouseLinkedName?: string | null } | null>(null)
   const [hasKids, setHasKids] = useState<'' | 'sim' | 'nao'>('')
   const [kids, setKids] = useState<Child[]>([])
 
@@ -84,6 +85,12 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
     setError(null)
     if (picking && !gcaId) { setError('Escolha o seu GCA na lista.'); return }
     if (!form.nm) { setError('Responda se você já fez o curso de Novos Membros.'); return }
+    if (!form.rhema) { setError('Responda se você é formado(a) no RHEMA.'); return }
+    if (!form.marital_status) { setError('Informe seu estado civil.'); return }
+    if (form.marital_status === 'casado') {
+      if (!form.spouse_name.trim()) { setError('Informe o nome do seu cônjuge.'); return }
+      if (!form.spouse_in_gca) { setError('Responda se seu cônjuge participa do GCA.'); return }
+    }
     if (!hasKids) { setError('Responda se você tem filhos.'); return }
     if (hasKids === 'sim') {
       const missing = kids.findIndex(k => !k.full_name.trim() || !k.birth_date || !k.gender)
@@ -101,7 +108,7 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
     const data = await res.json().catch(() => ({}))
     setLoading(false)
     if (!res.ok) { setError(data.error || 'Erro ao enviar. Tente novamente.'); return }
-    setDone({ result: data.result, gcaName: data.gcaName })
+    setDone({ result: data.result, gcaName: data.gcaName, spouseLinkedName: data.spouseLinkedName })
   }
 
   if (done) {
@@ -121,6 +128,9 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
               ? <>Seus dados foram atualizados. Você já faz parte do <strong>{done.gcaName}</strong>.</>
               : <>Agora você faz parte do <strong>{done.gcaName}</strong> no nosso sistema. Que alegria ter você!</>}
         </p>
+        {done.spouseLinkedName && (
+          <p className="text-sm text-violet-700 mt-3">💍 Seu cadastro foi ligado ao de <strong>{done.spouseLinkedName}</strong>.</p>
+        )}
       </div>
     )
   }
@@ -197,6 +207,60 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
           ))}
         </div>
       </div>
+
+      {/* RHEMA */}
+      <div>
+        <label className={labelClass}>Você é formado(a) no RHEMA? *</label>
+        <div className="grid grid-cols-2 gap-2">
+          {[['sim', 'Sim'], ['nao', 'Não']].map(([v, l]) => (
+            <button type="button" key={v} onClick={() => set('rhema', v)}
+              className={`h-11 rounded-lg border-2 text-sm font-semibold ${form.rhema === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Estado civil + cônjuge */}
+      <div>
+        <label className={labelClass}>Estado civil *</label>
+        <div className="grid grid-cols-2 gap-2">
+          {[['solteiro', 'Solteiro(a)'], ['casado', 'Casado(a)'], ['divorciado', 'Divorciado(a)'], ['viuvo', 'Viúvo(a)']].map(([v, l]) => (
+            <button type="button" key={v} onClick={() => set('marital_status', v)}
+              className={`h-11 rounded-lg border-2 text-sm font-semibold ${form.marital_status === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {form.marital_status === 'casado' && (
+        <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+          <p className="text-sm font-semibold text-slate-800">💍 Seu cônjuge</p>
+          <div>
+            <label className={labelClass}>Nome completo do cônjuge *</label>
+            <input value={form.spouse_name} onChange={e => set('spouse_name', e.target.value)} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>WhatsApp do cônjuge <span className="text-slate-400 font-normal">(ajuda a ligar os dois cadastros)</span></label>
+            <input type="tel" inputMode="tel" value={form.spouse_phone} onChange={e => set('spouse_phone', maskPhone(e.target.value))} placeholder="(21) 99999-9999" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Seu cônjuge participa do GCA? *</label>
+            <div className="grid grid-cols-1 gap-2">
+              {[['mesmo_gca', 'Sim, do mesmo GCA que eu'], ['outro_gca', 'Sim, de outro GCA'], ['nao_participa', 'Não participa de GCA']].map(([v, l]) => (
+                <button type="button" key={v} onClick={() => set('spouse_in_gca', v)}
+                  className={`min-h-11 px-3 rounded-lg border-2 text-sm font-semibold text-left ${form.spouse_in_gca === v ? 'border-violet-600 bg-white text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            {form.spouse_in_gca === 'mesmo_gca' && (
+              <p className="text-xs text-violet-700 mt-2">👉 Peça para seu cônjuge também preencher este link — o sistema liga os dois cadastros sozinho.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filhos */}
       <div>

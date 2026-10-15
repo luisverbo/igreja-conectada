@@ -83,6 +83,14 @@ export async function POST(req: NextRequest) {
   }
   const gender = body.gender === 'M' || body.gender === 'F' ? body.gender : null
 
+  // Estado civil, RHEMA e cônjuge
+  const marital = ['solteiro', 'casado', 'divorciado', 'viuvo'].includes(body.marital_status) ? body.marital_status : null
+  const married = marital === 'casado'
+  const rhema = body.rhema === 'sim' ? true : body.rhema === 'nao' ? false : null
+  const spouseName: string | null = married ? (String(body.spouse_name || '').trim().slice(0, 120) || null) : null
+  const spousePhone: string | null = married && phoneKey(body.spouse_phone || '').length >= 8 ? String(body.spouse_phone).trim() : null
+  const spouseInGca: string | null = married && ['mesmo_gca', 'outro_gca', 'nao_participa'].includes(body.spouse_in_gca) ? body.spouse_in_gca : null
+
   // Filhos informados no formulário (não viram membros do GCA)
   const children: { full_name: string; birth_date: string | null; gender: 'M' | 'F' | null }[] =
     (Array.isArray(body.children) ? body.children : [])
@@ -100,6 +108,7 @@ export async function POST(req: NextRequest) {
     if (fullAddress || addressFields.neighborhood) Object.assign(update, addressFields)
     if (body.birth_date) update.birth_date = body.birth_date
     if (gender) update.gender = gender
+    if (marital) update.marital_status = marital
     // Só avança o status — nunca rebaixa quem já está mais adiante
     if (nm === 'sim' && ['novo', 'em_novos_membros', 'concluiu_novos_membros'].includes(person.status)) {
       update.status = 'em_discipulado'
@@ -115,6 +124,7 @@ export async function POST(req: NextRequest) {
         ...addressFields,
         birth_date: body.birth_date || null,
         gender,
+        marital_status: marital,
         origin: 'veio_de_outra_igreja',
         // Quem ainda não fez NM aparece no radar para ser encaminhado ao curso
         status: nm === 'sim' ? 'em_discipulado' : nm === 'fazendo' ? 'em_novos_membros' : 'novo',
@@ -188,6 +198,26 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // ── RHEMA e cônjuge (colunas da migration 013) — em update separado:
+  //    se o SQL ainda não foi aplicado, o cadastro do adulto não quebra.
+  let spouseLinkedName: string | null = null
+  try {
+    const extra: Record<string, unknown> = {}
+    if (rhema !== null) extra.rhema_graduated = rhema
+    if (marital) {
+      extra.spouse_name = spouseName
+      extra.spouse_phone = spousePhone
+      extra.spouse_in_gca = spouseInGca
+      if (!married) extra.spouse_id = null
+    }
+    if (Object.keys(extra).length) {
+      await supabase.from('people').update(extra).eq('id', personId)
+    }
+    if (married) spouseLinkedName = await linkSpouse(supabase, {
+      churchId, gcaId: gca.id, personId, myName: full_name, myPhone: phone, spouseName, spousePhone,
+    })
+  } catch { /* segue o cadastro */ }
+
   // ── Filhos: atualiza quem já existe (mesmo nome) e acrescenta os novos.
   //    Nunca apaga — se pai e mãe preencherem, cada um fica com os seus.
   //    Falha aqui não pode derrubar o cadastro do adulto.
@@ -225,5 +255,62 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  return NextResponse.json({ ok: true, result, gcaName: gca.name })
+  return NextResponse.json({ ok: true, result, gcaName: gca.name, spouseLinkedName })
+}
+
+const firstName = (s: string | null | undefined) => normName(s || '').split(' ')[0] || ''
+
+/**
+ * Liga a pessoa ao cônjuge (dos dois lados). Quem se cadastra primeiro
+ * deixa o nome do cônjuge guardado; quando o outro se cadastrar, o
+ * vínculo é feito sozinho. Procura, nesta ordem:
+ *  1. o telefone do cônjuge informado
+ *  2. o nome completo do cônjuge informado
+ *  3. alguém que já tinha me informado como cônjuge (pelo meu telefone
+ *     ou pelo meu nome — inclusive só o primeiro nome, se for do mesmo GCA)
+ * Só vincula quando a resposta é única, para não casar as pessoas erradas.
+ */
+async function linkSpouse(
+  supabase: ReturnType<typeof createAdminClient>,
+  o: { churchId: string; gcaId: string; personId: string; myName: string; myPhone: string; spouseName: string | null; spousePhone: string | null },
+): Promise<string | null> {
+  const { data: people, error } = await supabase
+    .from('people')
+    .select('id, full_name, phone, spouse_id, spouse_name, spouse_phone')
+    .eq('church_id', o.churchId)
+    .neq('id', o.personId)
+    .limit(10000)
+  if (error || !people) return null
+
+  const free = (p: { spouse_id: string | null }) => !p.spouse_id || p.spouse_id === o.personId
+  const one = <T,>(list: T[]) => (list.length === 1 ? list[0] : undefined)
+
+  let spouse =
+    (o.spousePhone && one(people.filter(p => free(p) && p.phone && phoneKey(p.phone) === phoneKey(o.spousePhone!)))) ||
+    (o.spouseName && one(people.filter(p => free(p) && normName(p.full_name) === normName(o.spouseName!)))) ||
+    one(people.filter(p => free(p) && (
+      (p.spouse_phone && phoneKey(p.spouse_phone) === phoneKey(o.myPhone)) ||
+      (p.spouse_name && normName(p.spouse_name) === normName(o.myName))
+    )))
+
+  // Último recurso: casal do MESMO GCA que só escreveu o primeiro nome
+  if (!spouse && o.spouseName) {
+    const { data: rows } = await supabase
+      .from('discipleship_members').select('person_id').eq('discipleship_id', o.gcaId).neq('status', 'inativo')
+    const inGca = new Set((rows || []).map(r => r.person_id))
+    spouse = one(people.filter(p =>
+      free(p) && inGca.has(p.id) &&
+      firstName(p.full_name) === firstName(o.spouseName) &&
+      (!p.spouse_name || firstName(p.spouse_name) === firstName(o.myName))
+    ))
+  }
+  if (!spouse) return null
+
+  await supabase.from('people').update({ spouse_id: spouse.id }).eq('id', o.personId)
+  await supabase.from('people').update({
+    spouse_id: o.personId,
+    marital_status: 'casado',
+    ...(spouse.spouse_name ? {} : { spouse_name: o.myName }),
+  }).eq('id', spouse.id)
+  return spouse.full_name
 }
