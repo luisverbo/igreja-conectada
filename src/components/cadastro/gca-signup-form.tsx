@@ -48,6 +48,8 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
   const [done, setDone] = useState<{ result: string; gcaName: string; spouseLinkedName?: string | null } | null>(null)
   const [hasKids, setHasKids] = useState<'' | 'sim' | 'nao'>('')
   const [kids, setKids] = useState<Child[]>([])
+  const [serves, setServes] = useState<'' | 'sim' | 'nao'>('')
+  const [depts, setDepts] = useState<string[]>([''])
 
   function setKidsCount(n: number) {
     const count = Math.max(1, Math.min(MAX_CHILDREN, n))
@@ -86,6 +88,8 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
     if (picking && !gcaId) { setError('Escolha o seu GCA na lista.'); return }
     if (!form.nm) { setError('Responda se você já fez o curso de Novos Membros.'); return }
     if (!form.rhema) { setError('Responda se você é formado(a) no RHEMA.'); return }
+    if (!serves) { setError('Responda se você serve em algum departamento da igreja.'); return }
+    if (serves === 'sim' && !depts.some(d => d.trim())) { setError('Escreva o nome do departamento em que você serve.'); return }
     if (!form.marital_status) { setError('Informe seu estado civil.'); return }
     if (form.marital_status === 'casado') {
       if (!form.spouse_in_gca) { setError('Responda se seu cônjuge participa deste GCA.'); return }
@@ -104,6 +108,7 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
       body: JSON.stringify({
         ...form, gcaToken, churchToken, discipleshipId: gcaId || undefined,
         children: hasKids === 'sim' ? kids : [],
+        serves_departments: serves === 'sim' ? depts.map(d => d.trim()).filter(Boolean) : serves === 'nao' ? [] : undefined,
       }),
     })
     const data = await res.json().catch(() => ({}))
@@ -221,6 +226,48 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Departamentos em que serve */}
+      <div>
+        <label className={labelClass}>Você serve em algum departamento da igreja? *</label>
+        <div className="grid grid-cols-2 gap-2">
+          {([['sim', 'Sim'], ['nao', 'Não']] as const).map(([v, l]) => (
+            <button type="button" key={v} onClick={() => setServes(v)}
+              className={`h-11 rounded-lg border-2 text-sm font-semibold ${serves === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {serves === 'sim' && (
+        <div className="rounded-xl border-2 border-slate-300 bg-slate-100 p-4 space-y-2 shadow-sm">
+          <p className="text-sm font-bold text-slate-800">🙌 Em qual departamento? *</p>
+          {depts.map((d, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={d}
+                onChange={e => setDepts(prev => prev.map((x, j) => (j === i ? e.target.value : x)))}
+                placeholder={i === 0 ? 'Ex: Louvor, Mídia, Recepção, Kids...' : 'Outro departamento'}
+                className={inputClass}
+              />
+              {depts.length > 1 && (
+                <button type="button" onClick={() => setDepts(prev => prev.filter((_, j) => j !== i))}
+                  aria-label="Remover departamento"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-red-500">
+                  <Minus className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+          {depts.length < 6 && (
+            <button type="button" onClick={() => setDepts(prev => [...prev, ''])}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-violet-700">
+              <Plus className="h-4 w-4" /> Adicionar outro departamento
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Estado civil + cônjuge */}
       <div>

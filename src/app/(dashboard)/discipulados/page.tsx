@@ -122,6 +122,13 @@ export default async function DiscipuladosPage() {
     if (st === 'cursando') rhemaStudyMap[m.discipleship_id] = (rhemaStudyMap[m.discipleship_id] || 0) + 1
   })
   const totalRhema = Object.values(rhemaMap).reduce((a, b) => a + b, 0)
+
+  // Quem serve em algum departamento da igreja (migration 015 — sem ela, 0)
+  const { data: servingRows } = await supabase
+    .from('people').select('id, serves_departments').eq('church_id', profile.church_id).not('serves_departments', 'is', null)
+  const servingIds = new Set((servingRows || []).filter((r: any) => r.serves_departments?.length > 0).map(r => r.id))
+  const servingMap: Record<string, number> = {}
+  memberCounts?.forEach(m => { if (servingIds.has(m.person_id)) servingMap[m.discipleship_id] = (servingMap[m.discipleship_id] || 0) + 1 })
   const totalRhemaStudying = Object.values(rhemaStudyMap).reduce((a, b) => a + b, 0)
   const totalKids = Object.values(kidsMap).reduce((a, b) => a + b, 0)
 
@@ -350,6 +357,7 @@ export default async function DiscipuladosPage() {
                     {kidsMap[d.id] > 0 && <Badge variant="outline">👶 {kidsMap[d.id]} {kidsMap[d.id] === 1 ? 'criança' : 'crianças'}</Badge>}
                     {rhemaMap[d.id] > 0 && <Badge variant="outline">🎓 {rhemaMap[d.id]} RHEMA</Badge>}
                     {rhemaStudyMap[d.id] > 0 && <Badge variant="outline">📖 {rhemaStudyMap[d.id]} cursando</Badge>}
+                    {servingMap[d.id] > 0 && <Badge variant="outline">🙌 {servingMap[d.id]} servem</Badge>}
                     {cap.state === 'acima' && <span className="text-xs font-semibold text-red-600">{cap.over} acima do limite</span>}
                     {careMap[d.id] > 0 && <Badge variant="warning">{careMap[d.id]} precisam de cuidado</Badge>}
                   </div>
@@ -425,12 +433,13 @@ export default async function DiscipuladosPage() {
                       <TableCell>
                         {(() => {
                           const cap = capMap[d.id]
-                          const kids = (kidsMap[d.id] > 0 || rhemaMap[d.id] > 0 || rhemaStudyMap[d.id] > 0) ? (
+                          const kids = (kidsMap[d.id] > 0 || rhemaMap[d.id] > 0 || rhemaStudyMap[d.id] > 0 || servingMap[d.id] > 0) ? (
                             <span className="text-[11px] text-slate-500 whitespace-nowrap">
                               {kidsMap[d.id] > 0 && <>👶 {kidsMap[d.id]} {kidsMap[d.id] === 1 ? 'criança' : 'crianças'}</>}
                               {kidsMap[d.id] > 0 && rhemaMap[d.id] > 0 && ' · '}
                               {rhemaMap[d.id] > 0 && <>🎓 {rhemaMap[d.id]} RHEMA</>}
                               {rhemaStudyMap[d.id] > 0 && <>{(kidsMap[d.id] > 0 || rhemaMap[d.id] > 0) && ' · '}📖 {rhemaStudyMap[d.id]} cursando</>}
+                              {servingMap[d.id] > 0 && <>{(kidsMap[d.id] > 0 || rhemaMap[d.id] > 0 || rhemaStudyMap[d.id] > 0) && ' · '}🙌 {servingMap[d.id]} servem</>}
                             </span>
                           ) : null
                           if (cap.limit == null) return <div className="flex flex-col items-start gap-0.5"><Badge variant="secondary">{cap.count}</Badge>{kids}</div>

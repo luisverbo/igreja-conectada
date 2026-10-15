@@ -87,6 +87,10 @@ export async function POST(req: NextRequest) {
   const marital = ['solteiro', 'casado', 'divorciado', 'viuvo'].includes(body.marital_status) ? body.marital_status : null
   const married = marital === 'casado'
   const rhema: string | null = ['formado', 'cursando', 'nao'].includes(body.rhema) ? body.rhema : null
+  // Departamentos em que serve: lista (vazia = não serve); sem resposta = não mexe
+  const servesDepartments: string[] | null = Array.isArray(body.serves_departments)
+    ? [...new Set<string>(body.serves_departments.map((d: unknown) => String(d || '').trim().slice(0, 60)).filter(Boolean))].slice(0, 6)
+    : null
   // Casal participa junto do GCA (não existe "outro GCA"): nome e telefone
   // do cônjuge só vêm quando ele(a) participa — servem para o vínculo
   const spouseInGca: string | null = married && ['mesmo_gca', 'nao_participa'].includes(body.spouse_in_gca) ? body.spouse_in_gca : null
@@ -207,6 +211,7 @@ export async function POST(req: NextRequest) {
   try {
     const extra: Record<string, unknown> = {}
     if (rhema) extra.rhema_status = rhema
+    if (servesDepartments) extra.serves_departments = servesDepartments
     if (marital) {
       extra.spouse_name = spouseName
       extra.spouse_phone = spousePhone

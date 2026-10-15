@@ -189,6 +189,14 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                     </dd>
                   </div>
                 )}
+                {Array.isArray(person.serves_departments) && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-500 flex-shrink-0">Serve em</dt>
+                    <dd className={person.serves_departments.length ? 'text-emerald-700 font-medium text-right' : 'text-slate-700'}>
+                      {person.serves_departments.length ? person.serves_departments.join(', ') : 'Não serve em departamento'}
+                    </dd>
+                  </div>
+                )}
                 {person.rhema_status && (
                   <div className="flex justify-between">
                     <dt className="text-slate-500">RHEMA</dt>

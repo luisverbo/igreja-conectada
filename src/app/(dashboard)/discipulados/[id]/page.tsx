@@ -332,6 +332,9 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
                             Desde {formatDate(member.joined_at)}
                             {member.people?.phone && ` · ${member.people.phone}`}
                           </p>
+                          {member.people?.serves_departments?.length > 0 && (
+                            <p className="text-xs text-emerald-700 font-medium mt-1">🙌 Serve em: {member.people.serves_departments.join(', ')}</p>
+                          )}
                           {(['formado', 'cursando'].includes(member.people?.rhema_status) || member.people?.marital_status === 'casado') && (
                             <div className="flex items-center gap-x-3 gap-y-1 mt-1 flex-wrap text-xs">
                               {member.people?.rhema_status === 'formado' && (
