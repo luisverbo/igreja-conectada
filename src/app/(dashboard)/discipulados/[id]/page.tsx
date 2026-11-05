@@ -14,7 +14,7 @@ import { EditDiscipleshipDialog } from '@/components/discipulados/edit-disciples
 import { RemoveMemberButton } from '@/components/discipulados/remove-member-button'
 import { ObservationEditButton } from '@/components/discipulados/observation-edit-button'
 import { GcaSurveysCard } from '@/components/gca/gca-surveys-card'
-import { leadersFull, leaderNames, leadersShort, gcaCapacity, childrenByGca, childAgeLabel } from '@/lib/gca'
+import { leadersFull, leaderNames, leadersShort, gcaCapacity, childrenByGca, childAgeLabel, isGcaChild } from '@/lib/gca'
 import { haversineKm, formatKm } from '@/lib/geo'
 import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
@@ -91,7 +91,8 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
         .order('birth_date', { ascending: true })
     : { data: [] as any[] }
   const kidsByParent: Record<string, any[]> = {}
-  ;(childRows || []).forEach((c: any) => { (kidsByParent[c.parent_id] ||= []).push(c) })
+  // No GCA só aparecem as crianças de até 11 anos (12+ vão para o Invictos)
+  ;(childRows || []).filter(isGcaChild).forEach((c: any) => { (kidsByParent[c.parent_id] ||= []).push(c) })
   // Cônjuges já vinculados (podem ser de outro GCA)
   const spouseIds = [...new Set((members || []).map((m: any) => m.people?.spouse_id).filter(Boolean))] as string[]
   const { data: spouseRows } = spouseIds.length

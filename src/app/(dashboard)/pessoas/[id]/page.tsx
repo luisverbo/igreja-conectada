@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Phone, Mail, Calendar, MapPin, BookOpen, Home, Heart, Baby } from 'lucide-react'
-import { childAgeLabel } from '@/lib/gca'
+import { childAgeLabel, isGcaChild } from '@/lib/gca'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -257,9 +257,12 @@ export default async function PessoaPerfilPage({ params }: { params: Promise<{ i
                         {[c.gender === 'M' ? 'Menino' : c.gender === 'F' ? 'Menina' : null, c.birth_date ? formatDate(c.birth_date) : null].filter(Boolean).join(' · ')}
                       </p>
                     </div>
-                    {childAgeLabel(c.birth_date) && (
-                      <span className="text-xs font-semibold text-pink-600 flex-shrink-0">{childAgeLabel(c.birth_date)}</span>
-                    )}
+                    <div className="text-right flex-shrink-0">
+                      {childAgeLabel(c.birth_date) && (
+                        <span className={`text-xs font-semibold ${isGcaChild(c) ? 'text-pink-600' : 'text-slate-500'}`}>{childAgeLabel(c.birth_date)}</span>
+                      )}
+                      {!isGcaChild(c) && <p className="text-[10px] text-slate-400">Invictos · não conta no GCA</p>}
+                    </div>
                   </div>
                 ))}
               </CardContent>

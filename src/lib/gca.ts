@@ -62,6 +62,28 @@ export function gcaCapacity(
 
 // ── Crianças (filhos dos membros) ────────────────────────────────────
 // Não são membros do GCA e NÃO contam no limite de participantes.
+// Só contam as crianças de ATÉ 11 anos: a partir dos 12 elas vão para o
+// GCA dos jovens (Invictos), na igreja. A idade é calculada no dia, então
+// quem faz 12 anos sai da contagem sozinho.
+
+export const GCA_CHILD_MAX_AGE = 11
+
+/** Idade em anos completos (null se não houver data válida) */
+export function ageInYears(birthDate: string | null | undefined): number | null {
+  if (!birthDate) return null
+  const b = new Date(birthDate + 'T12:00:00')
+  if (isNaN(b.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - b.getFullYear()
+  if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) age--
+  return age
+}
+
+/** Criança que participa do GCA com os pais (até 11 anos) */
+export function isGcaChild(c: { birth_date: string | null }): boolean {
+  const age = ageInYears(c.birth_date)
+  return age != null && age >= 0 && age <= GCA_CHILD_MAX_AGE
+}
 
 export interface ChildRow { parent_id: string; full_name: string; birth_date: string | null }
 
@@ -78,7 +100,7 @@ export function childrenByGca(
   children: ChildRow[],
 ): Record<string, number> {
   const kidsByParent = new Map<string, ChildRow[]>()
-  children.forEach(c => kidsByParent.set(c.parent_id, [...(kidsByParent.get(c.parent_id) || []), c]))
+  children.filter(isGcaChild).forEach(c => kidsByParent.set(c.parent_id, [...(kidsByParent.get(c.parent_id) || []), c]))
 
   const seen: Record<string, Set<string>> = {}
   members.forEach(m => {

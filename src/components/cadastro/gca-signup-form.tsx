@@ -330,7 +330,10 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
       {hasKids === 'sim' && (
         <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Baby className="h-4 w-4 text-violet-600" /> Quantos filhos?</p>
+            <div>
+              <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Baby className="h-4 w-4 text-violet-600" /> Quantos filhos?</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Filhos de até 11 anos participam do GCA com vocês. A partir de 12, vão para o GCA dos jovens (Invictos).</p>
+            </div>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setKidsCount(kids.length - 1)} disabled={kids.length <= 1}
                 aria-label="Menos um filho"
