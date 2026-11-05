@@ -30,12 +30,18 @@ export const NM_ACCESS = [...NM_MANAGERS, 'new_members_helper']
 // Pode gerenciar o departamento Conselheiros
 export const COUNSELOR_MANAGERS = [...FULL_ACCESS, 'counselor_leader']
 
+// Conect (acolhimento de quem chega): Karen/Fábio = Líder de Conselheiros.
+// Gestores distribuem e trocam responsáveis; a equipe vê só quem é dela.
+export const CONECT_MANAGERS = COUNSELOR_MANAGERS
+export const CONECT_ACCESS = [...CONECT_MANAGERS, 'counselor_full']
+
 // Pode autorizar entrada no discipulado sem NM concluído
 export const DISCIPLESHIP_AUTHORIZERS = [...FULL_ACCESS, 'discipleship_supervisor']
 
 // Módulos do sistema para acesso customizado por usuário
 export const MODULES = [
   { key: 'pessoas', label: 'Pessoas' },
+  { key: 'conect', label: 'Conect' },
   { key: 'conselheiros', label: 'Conselheiros' },
   { key: 'novos-membros', label: 'Novos Membros' },
   { key: 'discipulados', label: 'GCA' },

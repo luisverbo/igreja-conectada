@@ -118,6 +118,13 @@ export default function NovaPessoaPage() {
       })
     }
 
+    // Entra no fluxo: mensagens automáticas da origem + responsável (Conect)
+    await fetch('/api/followups/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ personId: person.id }),
+    }).catch(() => {})
+
     router.push(`/pessoas/${person.id}`)
   }
 

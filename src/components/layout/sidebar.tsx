@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BookOpen, Menu, X, Search,
-  Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2, HeartHandshake,
+  Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2, HeartHandshake, HandHeart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 const allNavItems = [
   { key: 'dashboard', label: 'Dashboard', short: 'Início', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
   { key: 'pessoas', label: 'Pessoas', short: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
+  { key: 'conect', label: 'Conect', short: 'Conect', href: '/conect', icon: HandHeart, description: 'Acolhimento de quem chega', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full'] },
   { key: 'conselheiros', label: 'Conselheiros', short: 'Conselho', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full'] },
   { key: 'novos-membros', label: 'Novos Membros', short: 'N. Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'viewer'] },
   { key: 'discipulados', label: 'GCA', short: 'GCA', href: '/discipulados', icon: Home, description: 'Grupos e acompanhamento', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
@@ -140,8 +141,12 @@ export function MobileNav(props: NavProps) {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  // Barra inferior: até 4 atalhos + "Menu"
-  const tabs = navItems.filter(i => i.key !== 'configuracoes').slice(0, 4)
+  // Barra inferior: os 4 atalhos mais usados que a pessoa tem + "Menu"
+  const TAB_PRIORITY = ['dashboard', 'conect', 'novos-membros', 'discipulados', 'pessoas', 'conselheiros', 'relatorios']
+  const tabs = TAB_PRIORITY
+    .map(k => navItems.find(i => i.key === k))
+    .filter((i): i is (typeof navItems)[number] => !!i)
+    .slice(0, 4)
   const canSearch = navItems.some(i => i.key === 'pessoas')
 
   return (

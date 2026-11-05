@@ -9,6 +9,7 @@ interface Props {
 }
 
 const DELAY_OPTIONS = [
+  { value: 0, label: 'Na hora (assim que a pessoa é cadastrada)' },
   { value: 1, label: '1 hora depois' },
   { value: 6, label: '6 horas depois' },
   { value: 12, label: '12 horas depois' },
@@ -26,7 +27,15 @@ const TYPE_META = {
   video: { icon: Video, label: 'Vídeo', color: 'text-violet-600 bg-violet-50' },
 }
 
+const AUDIENCES = [
+  { value: 'todos', label: 'Todos que chegam' },
+  { value: 'aceitou_jesus', label: 'Só quem aceitou Jesus' },
+  { value: 'outra_igreja', label: 'Só quem veio de outra igreja' },
+]
+const audienceLabel = (v: string) => AUDIENCES.find(a => a.value === v)?.label || 'Quem aceitou Jesus'
+
 function delayLabel(hours: number) {
+  if (hours === 0) return 'Na hora'
   const opt = DELAY_OPTIONS.find(o => o.value === hours)
   if (opt) return opt.label
   return hours >= 24 ? `${Math.round(hours / 24)} dia(s) depois` : `${hours}h depois`
@@ -39,6 +48,7 @@ export function FollowupRulesSection({ churchId }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
+    trigger_event: 'todos',
     delay_hours: '24',
     message_type: 'texto' as 'texto' | 'audio' | 'video',
     content: '',
@@ -73,7 +83,7 @@ export function FollowupRulesSection({ churchId }: Props) {
     const supabase = createClient()
     const { error: insertError } = await supabase.from('followup_rules').insert({
       church_id: churchId,
-      trigger_event: 'aceitou_jesus',
+      trigger_event: form.trigger_event,
       delay_hours: parseInt(form.delay_hours),
       message_type: form.message_type,
       content: form.content.trim() || null,
@@ -86,7 +96,7 @@ export function FollowupRulesSection({ churchId }: Props) {
       return
     }
     setOpen(false)
-    setForm({ delay_hours: '24', message_type: 'texto', content: '', media_url: '' })
+    setForm({ trigger_event: 'todos', delay_hours: '24', message_type: 'texto', content: '', media_url: '' })
     load()
   }
 
@@ -109,8 +119,8 @@ export function FollowupRulesSection({ churchId }: Props) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm text-slate-500">
-          Quando alguém <strong>aceita Jesus</strong>, estas mensagens são enviadas automaticamente
-          pelo WhatsApp no horário programado. Use <code className="bg-slate-100 px-1 rounded text-xs">{'{nome}'}</code> para
+          Quando alguém chega — <strong>aceitou Jesus</strong> ou <strong>veio de outra igreja</strong> —, estas mensagens
+          são enviadas automaticamente pelo WhatsApp no horário programado (ex.: o vídeo de boas-vindas do pastor, na hora). Use <code className="bg-slate-100 px-1 rounded text-xs">{'{nome}'}</code> para
           incluir o primeiro nome da pessoa.
         </p>
         <button
@@ -143,6 +153,7 @@ export function FollowupRulesSection({ churchId }: Props) {
                   <p className="text-sm font-semibold text-slate-900">
                     {meta.label} · {delayLabel(rule.delay_hours)}
                   </p>
+                  <p className="text-[11px] font-medium text-violet-600">Para: {audienceLabel(rule.trigger_event)}</p>
                   {rule.content && <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{rule.content}</p>}
                   {rule.media_url && <p className="text-xs text-violet-500 truncate mt-0.5">{rule.media_url}</p>}
                 </div>
@@ -176,9 +187,16 @@ export function FollowupRulesSection({ churchId }: Props) {
 
             <form onSubmit={handleCreate} className="p-5 space-y-4">
               <div>
+                <label className={labelClass}>Para quem?</label>
+                <select value={form.trigger_event} onChange={e => setForm(p => ({ ...p, trigger_event: e.target.value }))} className={inputClass}>
+                  {AUDIENCES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                </select>
+              </div>
+
+              <div>
                 <label className={labelClass}>Enviar quando?</label>
                 <select value={form.delay_hours} onChange={e => setForm(p => ({ ...p, delay_hours: e.target.value }))} className={inputClass}>
-                  {DELAY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} de aceitar Jesus</option>)}
+                  {DELAY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.value === 0 ? o.label : `${o.label} do cadastro`}</option>)}
                 </select>
               </div>
 
