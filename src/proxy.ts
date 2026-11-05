@@ -33,6 +33,7 @@ export async function proxy(request: NextRequest) {
     || pathname.startsWith('/ficha')
     || pathname.startsWith('/pesquisa')
     || pathname.startsWith('/cadastro')
+    || pathname.startsWith('/certificado')
     || pathname.startsWith('/redefinir-senha')
     // Cada rota de API se autentica sozinha (login, token do link ou
     // CRON_SECRET) e responde JSON. Redirecionar para /login quebrava os

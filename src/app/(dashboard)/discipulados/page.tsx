@@ -16,7 +16,7 @@ import { GcaSetupGuide } from '@/components/discipulados/setup-guide'
 import { SignupLinksDialog, type GcaLinkItem } from '@/components/discipulados/signup-links-dialog'
 import { RequestActions } from '@/components/gca/request-actions'
 import { FULL_ACCESS } from '@/lib/roles'
-import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList } from 'lucide-react'
+import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList, Award } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { leadersShort, gcaCapacity, childrenByGca, type GcaCapacity } from '@/lib/gca'
 import { CapacityDialog, type CapacityGca } from '@/components/discipulados/capacity-dialog'
@@ -323,6 +323,14 @@ export default async function DiscipuladosPage() {
                 className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <ClipboardList className="h-4 w-4" /> Pesquisas
+              </Link>
+            )}
+            {canManageDept && (
+              <Link
+                href="/discipulados/certificados"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Award className="h-4 w-4" /> Certificados
               </Link>
             )}
             {canManageDept && <NewDiscipleshipDialog churchId={profile.church_id} userId={profile.id} />}
