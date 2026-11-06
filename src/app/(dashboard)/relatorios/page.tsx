@@ -9,6 +9,8 @@ import { MapSection } from '@/components/relatorios/map-section'
 import { NeighborhoodFilter } from '@/components/relatorios/neighborhood-filter'
 import Link from 'next/link'
 import { leadersShort, gcaCapacity, childrenByGca } from '@/lib/gca'
+import { geocodeNeighborhood, neighborhoodCenter } from '@/lib/geocode'
+import { haversineKm } from '@/lib/geo'
 
 export default async function RelatoriosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -32,7 +34,7 @@ export default async function RelatoriosPage() {
   ] = await Promise.all([
     supabase
       .from('people')
-      .select('id, full_name, phone, status, gender, birth_date, origin, neighborhood, city, latitude, longitude, accepted_jesus_at, created_at, assigned_to')
+      .select('id, full_name, phone, status, gender, birth_date, origin, neighborhood, city, state, latitude, longitude, accepted_jesus_at, created_at, assigned_to')
       .eq('church_id', cid)
       .limit(3000),
     supabase
@@ -214,63 +216,62 @@ export default async function RelatoriosPage() {
   // ============================================================
   // MAPA — geocoding com cache permanente
   // ============================================================
-  const neighborhoodMap: Record<string, { neighborhood: string; city: string; novos: number; membros: number; lat?: number; lng?: number }> = {}
+  type Hood = {
+    neighborhood: string; city: string; state: string | null; novos: number; membros: number
+    points: { lat: number; lng: number }[]; ref: { lat: number; lng: number } | null; lat?: number; lng?: number
+  }
+  const neighborhoodMap: Record<string, Hood> = {}
   for (const p of people || []) {
     if (!p.neighborhood && !p.city) continue
     const key = `${p.neighborhood ?? ''}|${p.city ?? ''}`
     if (!neighborhoodMap[key]) {
-      neighborhoodMap[key] = { neighborhood: p.neighborhood ?? '', city: p.city ?? '', novos: 0, membros: 0 }
+      neighborhoodMap[key] = { neighborhood: p.neighborhood ?? '', city: p.city ?? '', state: (p as any).state ?? null, novos: 0, membros: 0, points: [], ref: null }
     }
     if (p.status === 'novo') neighborhoodMap[key].novos++
     else neighborhoodMap[key].membros++
-    if (p.latitude && p.longitude && !neighborhoodMap[key].lat) {
-      neighborhoodMap[key].lat = p.latitude
-      neighborhoodMap[key].lng = p.longitude
-    }
+    // Guarda TODAS as posições do bairro (antes usava só a da primeira
+    // pessoa — se ela estivesse errada, o bairro inteiro ia junto)
+    if (p.latitude && p.longitude) neighborhoodMap[key].points.push({ lat: p.latitude, lng: p.longitude })
   }
 
-  // 1) Resolve pelo cache do banco (sem chamadas externas)
-  const missing = Object.values(neighborhoodMap).filter(n => !n.lat)
-  if (missing.length > 0) {
-    const queries = missing.map(n => [n.neighborhood, n.city, 'Brasil'].filter(Boolean).join(', '))
+  // Referência de cada bairro (centro conferido na cidade certa).
+  // Chave "v2|" ignora o cache antigo, que aceitava resultados de outra cidade.
+  const hoods = Object.values(neighborhoodMap).filter(n => n.neighborhood && n.city)
+  const refKey = (n: Hood) => 'v2|' + [n.neighborhood, n.city, n.state].filter(Boolean).join(', ')
+  if (hoods.length > 0) {
     const { data: cached } = await supabase
       .from('geocode_cache')
       .select('query, latitude, longitude')
-      .in('query', queries)
+      .in('query', hoods.map(refKey))
     const cacheMap = new Map((cached || []).map(c => [c.query, c]))
-    missing.forEach(n => {
-      const q = [n.neighborhood, n.city, 'Brasil'].filter(Boolean).join(', ')
-      const hit = cacheMap.get(q)
-      if (hit?.latitude) { n.lat = hit.latitude; n.lng = hit.longitude! }
+    const toFetch: Hood[] = []
+    hoods.forEach(n => {
+      const hit = cacheMap.get(refKey(n))
+      if (hit) { if (hit.latitude != null) n.ref = { lat: hit.latitude, lng: hit.longitude! } }
+      else toFetch.push(n)
     })
+    // No máximo 3 bairros novos por visita (respeita o Nominatim); o resto vem do cache
+    for (const n of toFetch.sort((a, b) => (b.novos + b.membros) - (a.novos + a.membros)).slice(0, 3)) {
+      const ref = await geocodeNeighborhood(n.neighborhood, n.city, n.state)
+      n.ref = ref
+      await supabase.from('geocode_cache').upsert(
+        { query: refKey(n), latitude: ref?.lat ?? null, longitude: ref?.lng ?? null },
+        { onConflict: 'query' }
+      )
+    }
   }
 
-  // 2) Geocodifica no máximo 3 por load (sequencial, respeitando o Nominatim)
-  //    e grava no cache — nas próximas visitas vem tudo do banco
-  const stillMissing = Object.values(neighborhoodMap).filter(n => !n.lat).slice(0, 3)
-  for (const n of stillMissing) {
-    const q = [n.neighborhood, n.city, 'Brasil'].filter(Boolean).join(', ')
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=br`,
-        { headers: { 'User-Agent': 'IgrejaConectada/1.0' }, next: { revalidate: 86400 } }
-      )
-      const data = await res.json()
-      if (Array.isArray(data) && data.length > 0) {
-        n.lat = parseFloat(data[0].lat)
-        n.lng = parseFloat(data[0].lon)
-        await supabase.from('geocode_cache').upsert(
-          { query: q, latitude: n.lat, longitude: n.lng },
-          { onConflict: 'query' }
-        )
-      } else {
-        // Cache negativo: evita repetir consultas de bairros não encontráveis
-        await supabase.from('geocode_cache').upsert(
-          { query: q, latitude: null, longitude: null },
-          { onConflict: 'query' }
-        )
-      }
-    } catch { /* geocoding é opcional */ }
+  // Posição da bolha: mediana das pessoas do bairro, sem quem caiu longe
+  const suspectPeople = new Set<string>()
+  for (const n of Object.values(neighborhoodMap)) {
+    const { center } = neighborhoodCenter(n.points, n.ref)
+    if (center) { n.lat = center.lat; n.lng = center.lng }
+  }
+  // Quem está a mais de 8 km do centro do próprio bairro tem posição errada
+  for (const p of people || []) {
+    if (!p.latitude || !p.longitude) continue
+    const n = neighborhoodMap[`${p.neighborhood ?? ''}|${p.city ?? ''}`]
+    if (n?.lat != null && n.lng != null && haversineKm(p.latitude, p.longitude, n.lat, n.lng) > 8) suspectPeople.add(p.id)
   }
 
   const geocodedGroups = Object.values(neighborhoodMap).filter(n => n.lat && n.lng)
@@ -282,7 +283,7 @@ export default async function RelatoriosPage() {
     .map(n => ({ neighborhood: n.neighborhood, city: n.city, count: n.membros, lat: n.lat as number, lng: n.lng as number }))
 
   const peopleMarkers = (people || [])
-    .filter(p => p.latitude != null && p.longitude != null)
+    .filter(p => p.latitude != null && p.longitude != null && !suspectPeople.has(p.id))
     .map(p => ({
       id: p.id,
       full_name: p.full_name,
