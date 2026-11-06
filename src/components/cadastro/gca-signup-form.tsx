@@ -420,8 +420,8 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
 
       <div>
         <label className={labelClass}>Você já fez o curso de Novos Membros? *</label>
-        <div className="grid grid-cols-3 gap-2">
-          {[['sim', 'Sim, já fiz'], ['fazendo', 'Estou fazendo'], ['nao', 'Ainda não']].map(([v, l]) => (
+        <div className="grid grid-cols-2 gap-2">
+          {[['sim', 'Sim, já fiz'], ['fazendo', 'Estou fazendo'], ['nao', 'Ainda não'], ['antigo', 'Sou membro antigo da igreja']].map(([v, l]) => (
             <button type="button" key={v} onClick={() => set('nm', v)}
               className={`min-h-11 px-2 py-2 rounded-lg border-2 text-xs sm:text-sm font-semibold ${form.nm === v ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>
               {l}

@@ -6,6 +6,7 @@ import { FULL_ACCESS, MODULES } from '@/lib/roles'
 // Which department leader can link people to which module
 const MODULE_MANAGERS: Record<string, string[]> = {
   'conselheiros': ['counselor_leader'],
+  'conect': ['conect_leader'],
   'novos-membros': ['new_members_leader'],
   'discipulados': ['discipleship_supervisor'],
 }

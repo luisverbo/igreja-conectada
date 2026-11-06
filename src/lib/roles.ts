@@ -10,6 +10,8 @@ export const ROLE_LABELS: Record<string, string> = {
   counselor: 'Conselheiro (formulário)',
   counselor_full: 'Conselheiro (acesso total)',
   counselor_leader: 'Líder de Conselheiros',
+  conect_leader: 'Líder do Conect',
+  conect_member: 'Equipe do Conect',
   new_members_teacher: 'Professor Novos Membros',
   new_members_leader: 'Líder de Novos Membros',
   new_members_helper: 'Auxiliar Novos Membros',
@@ -30,10 +32,10 @@ export const NM_ACCESS = [...NM_MANAGERS, 'new_members_helper']
 // Pode gerenciar o departamento Conselheiros
 export const COUNSELOR_MANAGERS = [...FULL_ACCESS, 'counselor_leader']
 
-// Conect (acolhimento de quem chega): Karen/Fábio = Líder de Conselheiros.
+// Conect (acolhimento de quem chega): Karen e Fábio = Líder do Conect.
 // Gestores distribuem e trocam responsáveis; a equipe vê só quem é dela.
-export const CONECT_MANAGERS = COUNSELOR_MANAGERS
-export const CONECT_ACCESS = [...CONECT_MANAGERS, 'counselor_full']
+export const CONECT_MANAGERS = [...FULL_ACCESS, 'conect_leader', 'counselor_leader']
+export const CONECT_ACCESS = [...CONECT_MANAGERS, 'conect_member', 'counselor_full']
 
 // Pode autorizar entrada no discipulado sem NM concluído
 export const DISCIPLESHIP_AUTHORIZERS = [...FULL_ACCESS, 'discipleship_supervisor']
@@ -55,6 +57,7 @@ export function assignableRoles(callerRole: string): string[] {
     return [
       'pastor', 'coordinator', 'supervisor',
       'counselor', 'counselor_full', 'counselor_leader',
+      'conect_leader', 'conect_member',
       'new_members_leader', 'new_members_teacher', 'new_members_helper',
       'discipleship_supervisor', 'discipleship_leader', 'viewer',
     ]
@@ -64,6 +67,9 @@ export function assignableRoles(callerRole: string): string[] {
   }
   if (callerRole === 'counselor_leader') {
     return ['counselor', 'counselor_full']
+  }
+  if (callerRole === 'conect_leader') {
+    return ['conect_member']
   }
   if (callerRole === 'discipleship_supervisor') {
     return ['discipleship_leader']

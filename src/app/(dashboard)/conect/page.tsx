@@ -4,6 +4,8 @@ import { Header } from '@/components/layout/header'
 import { CONECT_ACCESS, CONECT_MANAGERS } from '@/lib/roles'
 import { ConectBoard, type ConectPerson } from '@/components/conect/conect-board'
 import { ChurchQrCard } from '@/components/novos-membros/church-qr-card'
+import { DepartmentTeamCard } from '@/components/configuracoes/department-team-card'
+import { FULL_ACCESS } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +39,16 @@ export default async function ConectPage() {
   ])
 
   const ids = (people || []).map(p => p.id)
+  // Em qual GCA a pessoa já está (quem veio pelo link do GCA)
+  const { data: gcaRows } = ids.length
+    ? await supabase.from('discipleship_members')
+        .select('person_id, discipleships!inner(name, church_id)')
+        .eq('discipleships.church_id', profile.church_id)
+        .neq('status', 'inativo')
+    : { data: [] as any[] }
+  const gcaByPerson = new Map<string, string>()
+  ;(gcaRows || []).forEach((m: any) => { if (m.discipleships?.name) gcaByPerson.set(m.person_id, m.discipleships.name) })
+
   const [{ data: contacts }, { data: waitlist }] = ids.length
     ? await Promise.all([
         supabase.from('conect_contacts')
@@ -71,6 +83,7 @@ export default async function ConectPage() {
       : null,
     contacts: contactCount.get(p.id) || 0,
     in_waitlist: waiting.has(p.id),
+    gca_name: gcaByPerson.get(p.id) ?? null,
   }))
 
   return (
@@ -84,6 +97,20 @@ export default async function ConectPage() {
           staff={(staff || []).map(s => ({ id: s.id, full_name: s.full_name, role: s.role }))}
           classes={(classes || []).map(c => ({ id: c.id, name: c.name, enrollment_open: c.enrollment_open, day_of_week: c.day_of_week, time_start: c.time_start }))}
         />
+
+        {isManager && (
+          <DepartmentTeamCard
+            churchId={profile.church_id}
+            currentUserId={profile.id}
+            title="Equipe do Conect"
+            description="Quem acolhe e acompanha as pessoas que chegam. Quem é da Equipe do Conect vê na caixa só as pessoas que estão com ele."
+            deptRoles={['conect_leader', 'conect_member']}
+            assignRoles={FULL_ACCESS.includes(profile.role) ? ['conect_leader', 'conect_member'] : ['conect_member']}
+            canEdit={isManager}
+            moduleKey="conect"
+            moduleLabel="Conect"
+          />
+        )}
 
         {isManager && church?.welcome_token && (
           <ChurchQrCard

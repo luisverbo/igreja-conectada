@@ -29,6 +29,41 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const admin = createAdminClient()
+
+  // ── Não precisa de Novos Membros (uma ou várias pessoas) ──
+  //    'ja_fez'        → já fez o curso
+  //    'membro_antigo' → membro antigo, do tempo em que não havia o curso
+  if (body.action === 'dispensarNm') {
+    const mode = body.mode === 'ja_fez' ? 'ja_fez' : body.mode === 'membro_antigo' ? 'membro_antigo' : null
+    const ids: string[] = (Array.isArray(body.personIds) ? body.personIds : [body.personId]).filter(Boolean).slice(0, 500)
+    if (!mode || ids.length === 0) return NextResponse.json({ error: 'Escolha a opção e as pessoas.' }, { status: 400 })
+
+    const { data: rows } = await admin.from('people').select('id, church_id, assigned_to').in('id', ids)
+    const mine = (rows || []).filter(p => p.church_id === me.church_id && (isManager || p.assigned_to === me.id))
+    if (mine.length === 0) return NextResponse.json({ error: 'Nenhuma pessoa encontrada.' }, { status: 404 })
+
+    // Quem já está num GCA ativo fica "em discipulado"; os outros, "concluiu NM"
+    const { data: inGca } = await admin
+      .from('discipleship_members').select('person_id').in('person_id', mine.map(p => p.id)).neq('status', 'inativo')
+    const gcaSet = new Set((inGca || []).map(m => m.person_id))
+    const toGca = mine.filter(p => gcaSet.has(p.id)).map(p => p.id)
+    const toDone = mine.filter(p => !gcaSet.has(p.id)).map(p => p.id)
+    if (toGca.length) await admin.from('people').update({ status: 'em_discipulado' }).in('id', toGca)
+    if (toDone.length) await admin.from('people').update({ status: 'concluiu_novos_membros' }).in('id', toDone)
+    await admin.from('enrollment_waitlist').update({ status: 'cancelado' }).in('person_id', mine.map(p => p.id)).eq('status', 'aguardando')
+
+    const today = new Date().toISOString().slice(0, 10)
+    await admin.from('journey_events').insert(mine.map(p => ({
+      person_id: p.id,
+      event_type: mode === 'ja_fez' ? 'concluiu_novos_membros' : 'observacao',
+      event_date: today,
+      recorded_by: me.id,
+      description: mode === 'ja_fez'
+        ? `Já tinha feito Novos Membros (informado pelo Conect — ${me.full_name})`
+        : `Dispensado(a) de Novos Membros: membro antigo da igreja (por ${me.full_name})`,
+    })))
+    return NextResponse.json({ ok: true, count: mine.length })
+  }
   const { data: person } = await admin
     .from('people').select('id, church_id, full_name, phone, origin, status, assigned_to').eq('id', body.personId).maybeSingle()
   if (!person || person.church_id !== me.church_id) return NextResponse.json({ error: 'Pessoa não encontrada.' }, { status: 404 })

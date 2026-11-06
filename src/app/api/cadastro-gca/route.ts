@@ -71,7 +71,9 @@ export async function POST(req: NextRequest) {
     (byPhone.length === 1 ? byPhone[0] : undefined) ||
     (candidates || []).find(p => normName(p.full_name) === normName(full_name) && !p.phone)
 
-  const nm: 'sim' | 'fazendo' | 'nao' = ['sim', 'fazendo', 'nao'].includes(body.nm) ? body.nm : 'nao'
+  // 'antigo' = membro antigo, do tempo em que não havia o curso: não precisa fazer
+  const nm: 'sim' | 'fazendo' | 'nao' | 'antigo' = ['sim', 'fazendo', 'nao', 'antigo'].includes(body.nm) ? body.nm : 'nao'
+  const nmOk = nm === 'sim' || nm === 'antigo'
 
   const street = [body.address?.trim(), body.number?.trim()].filter(Boolean).join(', ')
   const fullAddress = [street, body.complement?.trim()].filter(Boolean).join(' - ') || null
@@ -117,7 +119,7 @@ export async function POST(req: NextRequest) {
     if (gender) update.gender = gender
     if (marital) update.marital_status = marital
     // Só avança o status — nunca rebaixa quem já está mais adiante
-    if (nm === 'sim' && ['novo', 'em_novos_membros', 'concluiu_novos_membros'].includes(person.status)) {
+    if (nmOk && ['novo', 'em_novos_membros', 'concluiu_novos_membros'].includes(person.status)) {
       update.status = 'em_discipulado'
     }
     await supabase.from('people').update(update).eq('id', person.id).eq('church_id', churchId)
@@ -134,7 +136,7 @@ export async function POST(req: NextRequest) {
         marital_status: marital,
         origin: 'veio_de_outra_igreja',
         // Quem ainda não fez NM aparece no radar para ser encaminhado ao curso
-        status: nm === 'sim' ? 'em_discipulado' : nm === 'fazendo' ? 'em_novos_membros' : 'novo',
+        status: nmOk ? 'em_discipulado' : nm === 'fazendo' ? 'em_novos_membros' : 'novo',
       })
       .select('id, full_name, phone, status')
       .single()
@@ -199,7 +201,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('journey_events').insert({
       person_id: personId,
       event_type: 'entrou_discipulado',
-      description: `Entrou no GCA ${gca.name} (cadastro pelo link)${nm !== 'sim' ? ` — informou que ${nm === 'fazendo' ? 'está fazendo' : 'ainda não fez'} Novos Membros` : ''}`,
+      description: `Entrou no GCA ${gca.name} (cadastro pelo link)${nm === 'antigo' ? ' — membro antigo, dispensado de Novos Membros' : nm !== 'sim' ? ` — informou que ${nm === 'fazendo' ? 'está fazendo' : 'ainda não fez'} Novos Membros` : ''}`,
       reference_type: 'discipulado',
       reference_id: gca.id,
     })
