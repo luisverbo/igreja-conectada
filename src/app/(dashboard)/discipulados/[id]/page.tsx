@@ -19,6 +19,7 @@ import { haversineKm, formatKm } from '@/lib/geo'
 import { EncaminharDialog } from '@/components/gca/encaminhar-dialog'
 import { DeleteGcaButton } from '@/components/discipulados/delete-gca-button'
 import { GcaSignupLinkCard } from '@/components/discipulados/signup-links-dialog'
+import { ExportMembersButtons, type ExportMember } from '@/components/discipulados/export-members'
 
 const statusVariant: Record<DiscipleshipMemberStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'outline'> = {
   ativo: 'success',
@@ -149,6 +150,58 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
   const dayLabels: Record<string, string> = {
     domingo: 'Domingo', segunda: 'Segunda-feira', terca: 'Terça-feira',
     quarta: 'Quarta-feira', quinta: 'Quinta-feira', sexta: 'Sexta-feira', sabado: 'Sábado',
+  }
+
+  // ── Lista para baixar (planilha / PDF): membros ativos, em ordem alfabética ──
+  const NM_LABEL: Record<string, string> = {
+    novo: 'Não fez', em_novos_membros: 'Fazendo', concluiu_novos_membros: 'Concluído',
+    em_discipulado: 'Concluído / dispensado', em_acompanhamento: 'Concluído / dispensado', servindo: 'Concluído / dispensado',
+  }
+  const RHEMA_LABEL: Record<string, string> = { formado: 'Formado(a)', cursando: 'Cursando', nao: 'Não' }
+  const MARITAL_LABEL: Record<string, string> = { solteiro: 'Solteiro(a)', casado: 'Casado(a)', divorciado: 'Divorciado(a)', viuvo: 'Viúvo(a)' }
+  const fmtBirth = (d: string | null) => (d ? formatDate(d) : '')
+  const ageOf = (d: string | null) => {
+    if (!d) return ''
+    const b = new Date(d + 'T12:00:00'), n = new Date()
+    let a = n.getFullYear() - b.getFullYear()
+    if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--
+    return isNaN(a) ? '' : String(a)
+  }
+  const exportMembers: ExportMember[] = activeMembers
+    .filter((m: any) => m.people)
+    .map((m: any) => {
+      const p = m.people
+      const spouse = p.spouse_id ? spouseById.get(p.spouse_id) : p.spouse_name
+      return {
+        nome: p.full_name,
+        telefone: p.phone || '',
+        situacao: DISCIPLESHIP_STATUS_LABELS[m.status as DiscipleshipMemberStatus] || m.status,
+        nascimento: fmtBirth(p.birth_date),
+        idade: ageOf(p.birth_date),
+        sexo: p.gender === 'M' ? 'Masculino' : p.gender === 'F' ? 'Feminino' : '',
+        endereco: [p.address, p.city].filter(Boolean).join(' - '),
+        bairro: p.neighborhood || '',
+        novosMembros: NM_LABEL[p.status] || '',
+        rhema: RHEMA_LABEL[p.rhema_status] || '',
+        estadoCivil: MARITAL_LABEL[p.marital_status] || '',
+        conjuge: p.marital_status === 'casado' && spouse ? spouse : '',
+        filhos: (kidsByParent[p.id] || []).map((k: any) => `${k.full_name}${childAgeLabel(k.birth_date) ? ` (${childAgeLabel(k.birth_date)})` : ''}`).join(', '),
+        serveEm: Array.isArray(p.serves_departments) ? p.serves_departments.join(', ') : '',
+        desde: fmtBirth(m.joined_at),
+      }
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  const exportHeader = {
+    gca: discipleship.name,
+    lideres: leadersFull(discipleship) || '',
+    supervisor: discipleship.supervisor?.full_name || '',
+    local: discipleship.location?.name || '',
+    anfitriao: [discipleship.location?.host_name, discipleship.location?.host_phone].filter(Boolean).join(' · '),
+    endereco: [discipleship.location?.address || discipleship.address, discipleship.location?.neighborhood || discipleship.neighborhood, discipleship.location?.city || discipleship.city].filter(Boolean).join(', '),
+    reuniao: [discipleship.day_of_week ? dayLabels[discipleship.day_of_week] : '', discipleship.time_start?.slice(0, 5)].filter(Boolean).join(' · '),
+    adultos: activeMembers.length,
+    criancas: kidsCount,
+    limite: cap.limit ? String(cap.limit) : '',
   }
 
   return (
@@ -303,10 +356,13 @@ export default async function DiscipuladoPage({ params }: { params: Promise<{ id
 
         {/* Members list with pastoral care */}
         <div className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-            <Users className="h-4 w-4 text-violet-600" />
-            Acompanhamento dos Membros
-          </h2>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <Users className="h-4 w-4 text-violet-600" />
+              Acompanhamento dos Membros
+            </h2>
+            <ExportMembersButtons header={exportHeader} members={exportMembers} />
+          </div>
 
           {members && members.length > 0 ? (
             <div className="space-y-3">
