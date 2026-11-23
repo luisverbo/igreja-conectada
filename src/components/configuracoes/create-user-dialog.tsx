@@ -16,7 +16,7 @@ const allRoles = [
   'counselor', 'counselor_full', 'counselor_leader',
   'conect_leader', 'conect_member',
   'new_members_leader', 'new_members_teacher', 'new_members_helper',
-  'discipleship_supervisor', 'discipleship_leader', 'viewer',
+  'discipleship_supervisor', 'discipleship_leader', 'department_leader', 'viewer',
 ]
 
 interface CreateUserDialogProps {

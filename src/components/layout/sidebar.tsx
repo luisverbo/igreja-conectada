@@ -5,18 +5,19 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BookOpen, Menu, X, Search,
-  Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2, HeartHandshake, HandHeart,
+  Home, BarChart3, Settings, ChevronRight, Church, LogOut, Building2, HeartHandshake, HandHeart, Layers,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
 const allNavItems = [
-  { key: 'dashboard', label: 'Dashboard', short: 'Início', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full', 'conect_leader', 'conect_member', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
+  { key: 'dashboard', label: 'Dashboard', short: 'Início', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full', 'conect_leader', 'conect_member', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'discipleship_supervisor', 'discipleship_leader', 'department_leader', 'viewer'] },
   { key: 'pessoas', label: 'Pessoas', short: 'Pessoas', href: '/pessoas', icon: Users, description: 'Jornada espiritual', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
   { key: 'conect', label: 'Conect', short: 'Conect', href: '/conect', icon: HandHeart, description: 'Acolhimento de quem chega', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'conect_leader', 'conect_member', 'counselor_leader', 'counselor_full'] },
   { key: 'conselheiros', label: 'Conselheiros', short: 'Conselho', href: '/conselheiros', icon: HeartHandshake, description: 'Cultos e decisões', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'counselor_leader', 'counselor_full'] },
   { key: 'novos-membros', label: 'Novos Membros', short: 'N. Membros', href: '/novos-membros', icon: BookOpen, description: 'Turmas e presença', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'new_members_leader', 'new_members_teacher', 'new_members_helper', 'viewer'] },
   { key: 'discipulados', label: 'GCA', short: 'GCA', href: '/discipulados', icon: Home, description: 'Grupos e acompanhamento', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'discipleship_supervisor', 'discipleship_leader', 'viewer'] },
+  { key: 'departamentos', label: 'Departamentos', short: 'Deptos', href: '/departamentos', icon: Layers, description: 'Onde cada um serve', roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'department_leader', 'viewer'] },
   { key: 'relatorios', label: 'Relatórios', short: 'Relatórios', href: '/relatorios', icon: BarChart3, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor', 'viewer'] },
   { key: 'configuracoes', label: 'Configurações', short: 'Ajustes', href: '/configuracoes', icon: Settings, roles: ['super_admin', 'pastor', 'coordinator', 'supervisor'] },
 ]
@@ -142,7 +143,7 @@ export function MobileNav(props: NavProps) {
   }, [open])
 
   // Barra inferior: os 4 atalhos mais usados que a pessoa tem + "Menu"
-  const TAB_PRIORITY = ['dashboard', 'conect', 'novos-membros', 'discipulados', 'pessoas', 'conselheiros', 'relatorios']
+  const TAB_PRIORITY = ['dashboard', 'conect', 'novos-membros', 'discipulados', 'departamentos', 'pessoas', 'conselheiros', 'relatorios']
   const tabs = TAB_PRIORITY
     .map(k => navItems.find(i => i.key === k))
     .filter((i): i is (typeof navItems)[number] => !!i)

@@ -24,7 +24,10 @@ export default async function CadastroGcaPage({ params }: { params: Promise<{ to
 
   if (!gca) notFound()
 
-  const { data: church } = await supabase.from('churches').select('name').eq('id', gca.church_id).single()
+  const [{ data: church }, { data: departments }] = await Promise.all([
+    supabase.from('churches').select('name').eq('id', gca.church_id).single(),
+    supabase.from('departments').select('id, name').eq('church_id', gca.church_id).eq('active', true).order('name'),
+  ])
   const leaders = leadersFull(gca as any)
 
   return (
@@ -42,7 +45,7 @@ export default async function CadastroGcaPage({ params }: { params: Promise<{ to
 
         <div className="bg-white rounded-2xl shadow-lg p-6">
           {gca.status === 'ativo'
-            ? <GcaSignupForm gcaToken={token} />
+            ? <GcaSignupForm gcaToken={token} departments={departments || []} />
             : <p className="text-center text-slate-500 py-6">Este GCA não está recebendo cadastros no momento.</p>}
         </div>
 

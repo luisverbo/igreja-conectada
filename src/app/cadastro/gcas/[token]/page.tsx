@@ -20,6 +20,9 @@ export default async function CadastroGcasPage({ params }: { params: Promise<{ t
     .from('churches').select('id, name').eq('gca_signup_token', token).maybeSingle()
   if (!church) notFound()
 
+  const { data: departments } = await supabase
+    .from('departments').select('id, name').eq('church_id', church.id).eq('active', true).order('name')
+
   const { data } = await supabase
     .from('discipleships')
     .select(`
@@ -54,7 +57,7 @@ export default async function CadastroGcasPage({ params }: { params: Promise<{ t
 
         <div className="bg-white rounded-2xl shadow-lg p-6">
           {gcas.length > 0
-            ? <GcaSignupForm churchToken={token} gcas={gcas} />
+            ? <GcaSignupForm churchToken={token} gcas={gcas} departments={departments || []} />
             : <p className="text-center text-slate-500 py-6">Nenhum GCA ativo no momento.</p>}
         </div>
 

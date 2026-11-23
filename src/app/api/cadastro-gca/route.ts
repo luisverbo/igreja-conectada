@@ -228,6 +228,21 @@ export async function POST(req: NextRequest) {
     })
   } catch { /* segue o cadastro */ }
 
+  // ── Departamentos marcados no link: já entra na equipe (os escritos à
+  //    mão viram sugestão para a liderança confirmar)
+  const deptIds: string[] = (Array.isArray(body.department_ids) ? body.department_ids : []).filter((x: unknown) => typeof x === 'string').slice(0, 20)
+  if (deptIds.length > 0) {
+    try {
+      const { data: valid } = await supabase.from('departments').select('id').eq('church_id', churchId).in('id', deptIds)
+      if (valid?.length) {
+        await supabase.from('department_members').upsert(
+          valid.map(d => ({ department_id: d.id, person_id: personId, church_id: churchId, source: 'gca' })),
+          { onConflict: 'department_id,person_id', ignoreDuplicates: true },
+        )
+      }
+    } catch { /* segue o cadastro */ }
+  }
+
   // ── Filhos: atualiza quem já existe (mesmo nome) e acrescenta os novos.
   //    Nunca apaga — se pai e mãe preencherem, cada um fica com os seus.
   //    Falha aqui não pode derrubar o cadastro do adulto.

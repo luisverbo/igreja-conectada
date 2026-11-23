@@ -17,6 +17,8 @@ interface Props {
   /** Link geral: a pessoa escolhe o GCA na lista */
   churchToken?: string
   gcas?: GcaOption[]
+  /** Departamentos cadastrados pela igreja — aparecem para marcar */
+  departments?: { id: string; name: string }[]
 }
 
 const empty = {
@@ -37,7 +39,7 @@ function maskPhone(v: string) {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
-export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
+export function GcaSignupForm({ gcaToken, churchToken, gcas = [], departments = [] }: Props) {
   const picking = !gcaToken
   const [gcaId, setGcaId] = useState('')
   const [search, setSearch] = useState('')
@@ -50,6 +52,7 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
   const [kids, setKids] = useState<Child[]>([])
   const [serves, setServes] = useState<'' | 'sim' | 'nao'>('')
   const [depts, setDepts] = useState<string[]>([''])
+  const [picked, setPicked] = useState<Set<string>>(new Set())
 
   function setKidsCount(n: number) {
     const count = Math.max(1, Math.min(MAX_CHILDREN, n))
@@ -89,7 +92,7 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
     if (!form.nm) { setError('Responda se você já fez o curso de Novos Membros.'); return }
     if (!form.rhema) { setError('Responda se você é formado(a) no RHEMA.'); return }
     if (!serves) { setError('Responda se você serve em algum departamento da igreja.'); return }
-    if (serves === 'sim' && !depts.some(d => d.trim())) { setError('Escreva o nome do departamento em que você serve.'); return }
+    if (serves === 'sim' && picked.size === 0 && !depts.some(d => d.trim())) { setError('Marque (ou escreva) o departamento em que você serve.'); return }
     if (!form.marital_status) { setError('Informe seu estado civil.'); return }
     if (form.marital_status === 'casado') {
       if (!form.spouse_in_gca) { setError('Responda se seu cônjuge participa deste GCA.'); return }
@@ -108,7 +111,10 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
       body: JSON.stringify({
         ...form, gcaToken, churchToken, discipleshipId: gcaId || undefined,
         children: hasKids === 'sim' ? kids : [],
-        serves_departments: serves === 'sim' ? depts.map(d => d.trim()).filter(Boolean) : serves === 'nao' ? [] : undefined,
+        serves_departments: serves === 'sim'
+          ? [...departments.filter(d => picked.has(d.id)).map(d => d.name), ...depts.map(d => d.trim()).filter(Boolean)]
+          : serves === 'nao' ? [] : undefined,
+        department_ids: serves === 'sim' ? [...picked] : [],
       }),
     })
     const data = await res.json().catch(() => ({}))
@@ -243,12 +249,30 @@ export function GcaSignupForm({ gcaToken, churchToken, gcas = [] }: Props) {
       {serves === 'sim' && (
         <div className="rounded-xl border-2 border-slate-300 bg-slate-100 p-4 space-y-2 shadow-sm">
           <p className="text-sm font-bold text-slate-800">🙌 Em qual departamento? *</p>
+          {departments.length > 0 && (
+            <>
+              <p className="text-xs text-slate-600">Marque todos em que você serve:</p>
+              <div className="flex flex-wrap gap-2">
+                {departments.map(d => {
+                  const on = picked.has(d.id)
+                  return (
+                    <button type="button" key={d.id} aria-pressed={on}
+                      onClick={() => setPicked(prev => { const n = new Set(prev); if (on) n.delete(d.id); else n.add(d.id); return n })}
+                      className={`rounded-full border-2 px-3 py-1.5 text-sm font-semibold ${on ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-300 bg-white text-slate-600'}`}>
+                      {on ? '✓ ' : ''}{d.name}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-slate-600 pt-2">Não está na lista? Escreva:</p>
+            </>
+          )}
           {depts.map((d, i) => (
             <div key={i} className="flex items-center gap-2">
               <input
                 value={d}
                 onChange={e => setDepts(prev => prev.map((x, j) => (j === i ? e.target.value : x)))}
-                placeholder={i === 0 ? 'Ex: Louvor, Mídia, Recepção, Kids...' : 'Outro departamento'}
+                placeholder={departments.length > 0 ? 'Outro departamento (opcional)' : i === 0 ? 'Ex: Louvor, Mídia, Recepção, Kids...' : 'Outro departamento'}
                 className={inputClass}
               />
               {depts.length > 1 && (

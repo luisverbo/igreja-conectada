@@ -20,6 +20,7 @@ import { GraduationCap, ArrowRightLeft, Inbox, ClipboardList, Award } from 'luci
 import { formatDate } from '@/lib/utils'
 import { leadersShort, gcaCapacity, childrenByGca, type GcaCapacity } from '@/lib/gca'
 import { CapacityDialog, type CapacityGca } from '@/components/discipulados/capacity-dialog'
+import { ExportTableButtons } from '@/components/export-table-buttons'
 
 export default async function DiscipuladosPage() {
   const { supabase, user, profile } = await getSessionProfile()
@@ -97,6 +98,29 @@ export default async function DiscipuladosPage() {
 
   // Member counts
   const ids = discipleships?.map(d => d.id) || []
+  // Lista completa (todos os GCAs) para baixar e mandar aos líderes conferirem
+  const { data: allMemberRows } = canManageDept && ids.length
+    ? await supabase.from('discipleship_members')
+        .select('discipleship_id, status, joined_at, people(full_name, phone, neighborhood, birth_date)')
+        .in('discipleship_id', ids)
+        .neq('status', 'inativo')
+    : { data: [] as any[] }
+  const gcaById = new Map((discipleships || []).map((d: any) => [d.id, d]))
+  const allExportRows = (allMemberRows || [])
+    .filter((m: any) => m.people)
+    .map((m: any) => {
+      const d: any = gcaById.get(m.discipleship_id)
+      return {
+        gca: d?.name || '',
+        lideres: d ? leadersShort(d) || '' : '',
+        nome: m.people.full_name,
+        telefone: m.people.phone || '',
+        bairro: m.people.neighborhood || '',
+        nascimento: m.people.birth_date ? m.people.birth_date.split('-').reverse().join('/') : '',
+      }
+    })
+    .sort((a: any, b: any) => a.gca.localeCompare(b.gca, 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'))
+
   const { data: memberCounts } = await supabase
     .from('discipleship_members')
     .select('discipleship_id, person_id, status')
@@ -311,6 +335,22 @@ export default async function DiscipuladosPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-base font-semibold text-slate-900">GCAs</h2>
           <div className="flex items-center gap-2 flex-wrap">
+            {canManageDept && (
+              <ExportTableButtons
+                title="Membros de todos os GCAs"
+                info={[`${allExportRows.length} membros ativos em ${activeGroups.length} GCAs`]}
+                fileBase="membros-todos-os-gcas"
+                columns={[
+                  { key: 'gca', label: 'GCA', pdfWidth: 45 },
+                  { key: 'lideres', label: 'Líderes', pdfWidth: 40 },
+                  { key: 'nome', label: 'Nome', pdfWidth: 70 },
+                  { key: 'telefone', label: 'WhatsApp', pdfWidth: 32 },
+                  { key: 'bairro', label: 'Bairro', pdfWidth: 40 },
+                  { key: 'nascimento', label: 'Nascimento' },
+                ]}
+                rows={allExportRows}
+              />
+            )}
             {canManageDept && (
               <CapacityDialog churchId={profile.church_id} defaultLimit={defaultLimit} gcas={capacityGcas} />
             )}

@@ -27,6 +27,7 @@ const roleVariant: Record<string, 'default' | 'secondary' | 'success' | 'warning
   counselor_leader: 'warning',
   conect_leader: 'warning',
   conect_member: 'secondary',
+  department_leader: 'secondary',
   new_members_teacher: 'secondary',
   new_members_leader: 'warning',
   new_members_helper: 'secondary',
