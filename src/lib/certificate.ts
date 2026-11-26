@@ -3,7 +3,7 @@
 import { EB_Garamond } from 'next/font/google'
 
 // Fonte do nome do casal (serifada itálica, como no modelo)
-export const certFont = EB_Garamond({ subsets: ['latin'], weight: ['600'], style: ['italic', 'normal'] })
+export const certFont = EB_Garamond({ subsets: ['latin'], weight: ['400', '600'], style: ['italic', 'normal'] })
 
 export interface CertTemplate {
   label: string
@@ -12,6 +12,16 @@ export interface CertTemplate {
   height: number
   /** Onde vai o nome do casal: centro horizontal, linha de base, largura máxima */
   name: { cx: number; baseline: number; maxWidth: number; fontSize: number; color: string }
+  /**
+   * Versão para UMA pessoa (fez o curso sozinha): outro fundo, sem as
+   * frases de casal, e as frases que entram no lugar. O tamanho da letra
+   * é calculado para a frase original (`sizeLike`) ocupar a mesma largura
+   * que tinha no modelo (`sizeWidth`) — fica igual ao resto do texto.
+   */
+  single?: {
+    src: string
+    lines: { text: string; cx: number; baseline: number; sizeLike: string; sizeWidth: number; color: string }[]
+  }
 }
 
 export const CERT_TEMPLATES: Record<string, CertTemplate> = {
@@ -21,6 +31,13 @@ export const CERT_TEMPLATES: Record<string, CertTemplate> = {
     width: 1448,
     height: 1086,
     name: { cx: 724, baseline: 592, maxWidth: 660, fontSize: 66, color: '#10224a' },
+    single: {
+      src: '/certificados/lideranca-gca-individual.jpg',
+      lines: [
+        { text: 'Certificamos que', cx: 723, baseline: 508, sizeLike: 'Certificamos que o casal', sizeWidth: 377, color: '#151619' },
+        { text: 'com preparo para servir na liderança, cuidando de vidas', cx: 724, baseline: 720, sizeLike: 'estando aptos a servir como casal líder, cuidando de vidas', sizeWidth: 898, color: '#151619' },
+      ],
+    },
   },
 }
 
@@ -61,8 +78,10 @@ function loadImage(src: string) {
 export async function drawCertificate(canvas: HTMLCanvasElement, templateKey: string, name1: string, name2?: string | null) {
   const t = templateOf(templateKey)
   const family = certFont.style.fontFamily
+  const single = !!t.single && !!(name1 || '').trim() !== !!(name2 || '').trim()
   const [img] = await Promise.all([
-    loadImage(t.src),
+    loadImage(single ? t.single!.src : t.src),
+    document.fonts.load(`400 40px ${family}`).catch(() => null),
     document.fonts.load(`italic 600 ${t.name.fontSize}px ${family}`).catch(() => null),
     document.fonts.load(`600 ${t.name.fontSize}px ${family}`).catch(() => null),
   ])
@@ -70,6 +89,18 @@ export async function drawCertificate(canvas: HTMLCanvasElement, templateKey: st
   canvas.height = t.height
   const g = canvas.getContext('2d')!
   g.drawImage(img, 0, 0, t.width, t.height)
+
+  if (single) {
+    g.textAlign = 'center'
+    g.textBaseline = 'alphabetic'
+    for (const l of t.single!.lines) {
+      g.font = `400 100px ${family}`
+      const size = (100 * l.sizeWidth) / g.measureText(l.sizeLike).width
+      g.font = `400 ${size}px ${family}`
+      g.fillStyle = l.color
+      g.fillText(l.text, l.cx, l.baseline)
+    }
+  }
 
   // Nomes em itálico; o "&" em letra normal (como no modelo)
   const parts = [

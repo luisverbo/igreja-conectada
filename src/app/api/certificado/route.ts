@@ -21,8 +21,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const name1 = tidy(body.name1)
   const name2 = tidy(body.name2)
-  if (!body.token || !name1 || !name2) {
-    return NextResponse.json({ error: 'Preencha os dois nomes do casal.' }, { status: 400 })
+  // name2 vazio = fez o curso sozinho(a)
+  if (!body.token || !name1) {
+    return NextResponse.json({ error: 'Preencha o primeiro nome.' }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     campaign_id: campaign.id,
     church_id: campaign.church_id,
     name1,
-    name2,
+    name2: name2 || null,
   })
   if (error) return NextResponse.json({ error: 'Erro ao salvar. Tente novamente.' }, { status: 500 })
   return NextResponse.json({ ok: true })

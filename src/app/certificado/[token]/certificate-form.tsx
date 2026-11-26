@@ -10,6 +10,9 @@ const MAX = 22
 export function CertificateForm({ token, templateKey }: { token: string; templateKey: string }) {
   const [name1, setName1] = useState('')
   const [name2, setName2] = useState('')
+  // Fez em casal ou sozinho(a)? Sozinho(a) = um nome só, texto no singular
+  const [mode, setMode] = useState<'casal' | 'sozinho'>('casal')
+  const couple = mode === 'casal'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -17,12 +20,12 @@ export function CertificateForm({ token, templateKey }: { token: string; templat
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!name1.trim() || !name2.trim()) { setError('Preencha os dois nomes do casal.'); return }
+    if (!name1.trim() || (couple && !name2.trim())) { setError(couple ? 'Preencha os dois nomes do casal.' : 'Preencha o seu primeiro nome.'); return }
     setLoading(true)
     const res = await fetch('/api/certificado', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, name1, name2 }),
+      body: JSON.stringify({ token, name1, name2: couple ? name2 : '' }),
     })
     const data = await res.json().catch(() => ({}))
     setLoading(false)
@@ -36,7 +39,7 @@ export function CertificateForm({ token, templateKey }: { token: string; templat
     <div className="space-y-4">
       {/* Prévia ao vivo */}
       <div className="rounded-xl overflow-hidden shadow-xl ring-1 ring-black/5 bg-white">
-        <CertificateCanvas templateKey={templateKey} name1={tidyName(name1)} name2={tidyName(name2)} />
+        <CertificateCanvas templateKey={templateKey} name1={tidyName(name1)} name2={couple ? tidyName(name2) : ''} />
       </div>
 
       {done ? (
@@ -44,23 +47,37 @@ export function CertificateForm({ token, templateKey }: { token: string; templat
           <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
           <h2 className="text-xl font-bold text-slate-900">Certificado enviado! 🙌</h2>
           <p className="text-sm text-slate-600 mt-1">
-            O certificado de <strong>{tidyName(name1)} &amp; {tidyName(name2)}</strong> foi enviado para a liderança, que vai imprimir e entregar.
+            O certificado de <strong>{couple ? `${tidyName(name1)} & ${tidyName(name2)}` : tidyName(name1)}</strong> foi enviado para a liderança, que vai imprimir e entregar.
           </p>
         </div>
       ) : (
         <form onSubmit={submit} className="bg-white rounded-2xl shadow-lg p-5 space-y-4">
+          <div>
+            <p className="block text-sm font-semibold text-slate-700 mb-1.5">Vocês fizeram o curso…</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([['casal', '👫 Em casal'], ['sozinho', '🙋 Fiz sozinho(a)']] as const).map(([v, l]) => (
+                <button type="button" key={v} onClick={() => setMode(v)}
+                  className={`h-12 rounded-lg border-2 text-sm font-semibold ${mode === v ? 'border-blue-900 bg-blue-50 text-blue-900' : 'border-slate-200 text-slate-500'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 text-sm text-blue-900">
-            ✍️ Escreva <strong>só o primeiro nome</strong> de cada um (ou o nome composto, ex.: <em>Luís Carlos</em>). O nome aparece no certificado enquanto você digita.
+            ✍️ Escreva <strong>só o primeiro nome</strong>{couple ? ' de cada um' : ''} (ou o nome composto, ex.: <em>Luís Carlos</em>). O nome aparece no certificado enquanto você digita.
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">1º nome — primeiro nome *</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">{couple ? '1º nome — primeiro nome *' : 'Seu primeiro nome *'}</label>
             <input value={name1} onChange={e => setName1(e.target.value.slice(0, MAX))} placeholder="Ex: Luís Carlos" autoComplete="off" className={input} />
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">2º nome — primeiro nome *</label>
-            <input value={name2} onChange={e => setName2(e.target.value.slice(0, MAX))} placeholder="Ex: Meire" autoComplete="off" className={input} />
-          </div>
+          {couple && (
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">2º nome — primeiro nome *</label>
+              <input value={name2} onChange={e => setName2(e.target.value.slice(0, MAX))} placeholder="Ex: Meire" autoComplete="off" className={input} />
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">

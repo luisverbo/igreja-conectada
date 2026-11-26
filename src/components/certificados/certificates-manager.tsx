@@ -85,11 +85,11 @@ export function CertificatesManager({ churchId, campaigns, certificates }: Props
 
   async function saveEdit() {
     if (!editing) return
-    if (!editing.name1.trim() || !editing.name2.trim()) { setError('Preencha os dois nomes.'); return }
+    if (!editing.name1.trim()) { setError('Preencha pelo menos o primeiro nome.'); return }
     setBusy(editing.id)
     const supabase = createClient()
     const { error: e } = await supabase.from('certificates')
-      .update({ name1: tidyName(editing.name1), name2: tidyName(editing.name2) })
+      .update({ name1: tidyName(editing.name1), name2: editing.name2.trim() ? tidyName(editing.name2) : null })
       .eq('id', editing.id)
     setBusy(null)
     if (e) { setError('Erro ao salvar: ' + e.message); return }
@@ -203,6 +203,7 @@ export function CertificatesManager({ churchId, campaigns, certificates }: Props
                         className="h-9 w-32 flex-1 rounded-lg border border-slate-200 px-2 text-sm" />
                       <span className="text-slate-400">&amp;</span>
                       <input value={editing.name2} onChange={e => setEditing({ ...editing, name2: e.target.value })}
+                        placeholder="(vazio = só uma pessoa)"
                         className="h-9 w-32 flex-1 rounded-lg border border-slate-200 px-2 text-sm" />
                       <button onClick={saveEdit} disabled={busy === c.id} className={`${btn} bg-blue-900 text-white py-1.5`}>
                         {busy === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Salvar
